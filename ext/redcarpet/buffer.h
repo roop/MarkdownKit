@@ -36,12 +36,22 @@ typedef enum {
 	BUF_ENOMEM = -1,
 } buferror_t;
 
+/* struct dom_node: Abstract Syntax Tree node */
+struct dom_node;
+
+/* Type for byte-index into the original markdown source */
+typedef int32_t srcmap_t;
+
 /* struct buf: character array buffer */
 struct buf {
 	uint8_t *data;		/* actual character data */
 	size_t size;	/* size of the string */
 	size_t asize;	/* allocated size (0 = volatile buffer) */
 	size_t unit;	/* reallocation unit size (0 = read-only buffer) */
+	/* Extended by roop */
+	srcmap_t *srcmap; /* byte-indices into the original markdown source */
+	int is_srcmap_enabled;
+	struct dom_node *dom;
 };
 
 /* BUFPUTSL: optimized bufputs of a string literal */
@@ -53,6 +63,7 @@ int bufgrow(struct buf *, size_t);
 
 /* bufnew: allocation of a new buffer */
 struct buf *bufnew(size_t) __attribute__ ((malloc));
+struct buf *bufnewsm(size_t) __attribute__ ((malloc));
 
 /* bufnullterm: NUL-termination of the string array (making a C-string) */
 const char *bufcstr(struct buf *);
@@ -62,6 +73,7 @@ int bufprefix(const struct buf *buf, const char *prefix);
 
 /* bufput: appends raw data to a buffer */
 void bufput(struct buf *, const void *, size_t);
+void bufputsm(struct buf *, const void *data, const srcmap_t *srcmap, size_t offset, size_t len);
 
 /* bufputs: appends a NUL-terminated string to a buffer */
 void bufputs(struct buf *, const char *);
@@ -74,6 +86,14 @@ void bufrelease(struct buf *);
 
 /* bufprintf: formatted printing to a buffer */
 void bufprintf(struct buf *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
+
+/* Debugging srcmap */
+void bufdebugsm(struct buf *);
+
+/* Abstract Syntax Tree */
+void buf_append_dom_node(struct buf *, struct dom_node *);
+void bufreleasedom(struct buf *buf);
+void bufdebugdom(const struct buf *buf);
 
 #ifdef __cplusplus
 }

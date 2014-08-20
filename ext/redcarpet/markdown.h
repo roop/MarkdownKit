@@ -64,10 +64,11 @@ enum mkd_extensions {
 /* sd_callbacks - functions for rendering parsed data */
 struct sd_callbacks {
 	/* block level callbacks - NULL skips the block */
-	void (*blockcode)(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque);
+	void (*blockcode)(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque, srcmap_t *srcmap);
 	void (*blockquote)(struct buf *ob, const struct buf *text, void *opaque);
-	void (*blockhtml)(struct buf *ob,const  struct buf *text, void *opaque);
-	void (*header)(struct buf *ob, const struct buf *text, int level, void *opaque);
+	void (*blockhtml)(struct buf *ob,const  struct buf *text, void *opaque, srcmap_t *srcmap, void *shl);
+	void (*header)(struct buf *ob, const struct buf *text, int level, void *opaque,
+				   srcmap_t *srcmap, size_t srcmap_len, size_t srcmap_content_offset, size_t srcmap_content_len);
 	void (*hrule)(struct buf *ob, void *opaque);
 	void (*list)(struct buf *ob, const struct buf *text, int flags, void *opaque);
 	void (*listitem)(struct buf *ob, const struct buf *text, int flags, void *opaque);
@@ -79,8 +80,8 @@ struct sd_callbacks {
 	void (*footnote_def)(struct buf *ob, const struct buf *text, unsigned int num, void *opaque);
 
 	/* span level callbacks - NULL or return 0 prints the span verbatim */
-	int (*autolink)(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque);
-	int (*codespan)(struct buf *ob, const struct buf *text, void *opaque);
+	int (*autolink)(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque, srcmap_t *srcmap);
+	int (*codespan)(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap);
 	int (*double_emphasis)(struct buf *ob, const struct buf *text, void *opaque);
 	int (*emphasis)(struct buf *ob, const struct buf *text, void *opaque);
 	int (*underline)(struct buf *ob, const struct buf *text, void *opaque);
@@ -89,7 +90,7 @@ struct sd_callbacks {
 	int (*image)(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *alt, void *opaque);
 	int (*linebreak)(struct buf *ob, void *opaque);
 	int (*link)(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *content, void *opaque);
-	int (*raw_html_tag)(struct buf *ob, const struct buf *tag, void *opaque);
+	int (*raw_html_tag)(struct buf *ob, const struct buf *tag, void *opaque, srcmap_t *srcmap, void *shl);
 	int (*triple_emphasis)(struct buf *ob, const struct buf *text, void *opaque);
 	int (*strikethrough)(struct buf *ob, const struct buf *text, void *opaque);
 	int (*superscript)(struct buf *ob, const struct buf *text, void *opaque);
@@ -97,11 +98,14 @@ struct sd_callbacks {
 
 	/* low level callbacks - NULL copies input directly into the output */
 	void (*entity)(struct buf *ob, const struct buf *entity, void *opaque);
-	void (*normal_text)(struct buf *ob, const struct buf *text, void *opaque);
+	void (*normal_text)(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap);
 
 	/* header and footer */
 	void (*doc_header)(struct buf *ob, void *opaque);
 	void (*doc_footer)(struct buf *ob, void *opaque);
+
+	/* Editor cursor position marker */
+	void (*cursor_marker)(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t len, size_t effective_cursor_pos_index);
 };
 
 /* header methods used internally in Redcarpet */
@@ -126,7 +130,7 @@ sd_markdown_new(
 	unsigned int extensions,
 	size_t max_nesting,
 	const struct sd_callbacks *callbacks,
-	void *opaque);
+	void *opaque, void *shl);
 
 extern void
 sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, struct sd_markdown *md);

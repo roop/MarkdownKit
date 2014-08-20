@@ -18,6 +18,7 @@
 #define BUFFER_MAX_ALLOC_SIZE (1024 * 1024 * 16) //16mb
 
 #include "buffer.h"
+#include "dom.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,6 +73,19 @@ bufgrow(struct buf *buf, size_t neosz)
 		return BUF_ENOMEM;
 
 	buf->data = neodata;
+
+	if (buf->is_srcmap_enabled) {
+		buf->srcmap = realloc(buf->srcmap, neoasz * sizeof(srcmap_t));
+		if (!buf->srcmap) {
+			return BUF_ENOMEM;
+		}
+		// Init unassigned bytes in the srcmap to -1 (which indicates
+		// that the byte cannot be mapped to the Markdown source)
+		for (size_t i = buf->asize; i < neoasz; i++) {
+			buf->srcmap[i] = -1;
+		}
+	}
+
 	buf->asize = neoasz;
 	return BUF_OK;
 }
@@ -88,6 +102,21 @@ bufnew(size_t unit)
 		ret->data = 0;
 		ret->size = ret->asize = 0;
 		ret->unit = unit;
+		ret->is_srcmap_enabled = 0;
+		ret->srcmap = 0;
+		ret->dom = 0;
+	}
+	return ret;
+}
+
+struct buf *
+bufnewsm(size_t unit)
+{
+	struct buf *ret;
+	ret = bufnew(unit);
+
+	if (ret) {
+		ret->is_srcmap_enabled = 1;
 	}
 	return ret;
 }
@@ -152,15 +181,24 @@ bufprintf(struct buf *buf, const char *fmt, ...)
 
 /* bufput: appends raw data to a buffer */
 void
-bufput(struct buf *buf, const void *data, size_t len)
+bufputsm(struct buf *buf, const void *data, const srcmap_t *srcmap, size_t offset, size_t len)
 {
 	assert(buf && buf->unit);
 
 	if (buf->size + len > buf->asize && bufgrow(buf, buf->size + len) < 0)
 		return;
 
-	memcpy(buf->data + buf->size, data, len);
+	memcpy(buf->data + buf->size, data + offset, len);
+	if (srcmap && buf->srcmap)
+		memcpy(buf->srcmap + buf->size, srcmap + offset, len * sizeof(srcmap_t));
+
 	buf->size += len;
+}
+
+void
+bufput(struct buf *buf, const void *data, size_t len)
+{
+	bufputsm(buf, data, (const srcmap_t *) 0, (size_t) 0, len);
 }
 
 /* bufputs: appends a NUL-terminated string to a buffer */
@@ -181,6 +219,8 @@ bufputc(struct buf *buf, int c)
 		return;
 
 	buf->data[buf->size] = c;
+	if (buf->is_srcmap_enabled && buf->srcmap)
+		buf->srcmap[buf->size] = -1;
 	buf->size += 1;
 }
 
@@ -192,5 +232,45 @@ bufrelease(struct buf *buf)
 		return;
 
 	free(buf->data);
+	free(buf->srcmap);
 	free(buf);
+}
+
+void bufdebugsm(struct buf *buf)
+{
+	for (int i = 0; i < buf->size; i++) {
+		if (buf->data[i] == '\n')
+			printf("\\n ");
+		else
+			printf(" %c ", buf->data[i]);
+	}
+	printf("\n");
+	for (int i = 0; i < buf->size; i++) {
+		printf("%2d ", (int) buf->srcmap[i]);
+	}
+	printf("\n");
+}
+
+void buf_append_dom_node(struct buf *buf, struct dom_node *node)
+{
+	if (buf->dom == 0) {
+		buf->dom = node;
+	} else {
+		dom_last_node(buf->dom)->next = node;
+		if (node->ambiguous_html_state) {
+			buf->dom->ambiguous_html_state = FOLLOWED_BY_AMBIGUOUS_HTML;
+		}
+	}
+}
+
+void bufdebugdom(const struct buf *buf)
+{
+	dom_print(buf->dom, buf, 0, 0);
+}
+
+void bufreleasedom(struct buf *buf)
+{
+	if (!buf)
+		return;
+	dom_release(buf->dom);
 }

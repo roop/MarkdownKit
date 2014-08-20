@@ -17,13 +17,17 @@
 
 #include "markdown.h"
 #include "html.h"
-#include "ruby.h"
+// #include "ruby.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include "houdini.h"
+#include "dom.h"
+#include "cursor_marker.h"
+#include "raw_html.h"
 
 #define USE_XHTML(opt) (opt->flags & HTML_USE_XHTML)
 
@@ -73,8 +77,9 @@ static inline void escape_href(struct buf *ob, const uint8_t *source, size_t len
 /********************
  * GENERIC RENDERER *
  ********************/
+
 static int
-rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque)
+rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque, srcmap_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
 
@@ -85,6 +90,8 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 		!sd_autolink_issafe(link->data, link->size) &&
 		type != MKDA_EMAIL)
 		return 0;
+
+	struct dom_node *dom_node = dom_new_node("a", ob->size, 0);
 
 	BUFPUTSL(ob, "<a href=\"");
 	if (type == MKDA_EMAIL)
@@ -99,6 +106,8 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 		BUFPUTSL(ob, "\">");
 	}
 
+	dom_node->content_offset = ob->size;
+
 	/*
 	 * Pretty printing: if we get an email address as
 	 * an actual URI, e.g. `mailto:foo@bar.com`, we don't
@@ -110,18 +119,26 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 		escape_html(ob, link->data, link->size);
 	}
 
+	rndr_cursor_marker(ob, opaque, srcmap, link->size, link->size - 1);
+
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 4;
+	buf_append_dom_node(ob, dom_node);
+
 	BUFPUTSL(ob, "</a>");
 
 	return 1;
 }
 
 static void
-rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque)
+rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque, srcmap_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
 
 	if (ob->size) bufputc(ob, '\n');
 
+	struct dom_node *dom_node = dom_new_node("pre", ob->size, 0);
+	dom_node->content_offset = ob->size + 5;
 	if (lang && lang->size) {
 		size_t i, cls;
 		if (options->flags & HTML_PRETTIFY) {
@@ -155,30 +172,71 @@ rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, v
 		BUFPUTSL(ob, "<pre><code>");
 	}
 
-	if (text)
-		escape_html(ob, text->data, text->size);
+	if (text) {
+		size_t effective_cursor_pos_index = 0;
+		int ci = index_of_cursor(opaque, srcmap, text->size, &effective_cursor_pos_index);
+		if (ci >= 0) { // Cursor is contained in this text
+			assert(ci <= text->size);
+			if (ci > 0)
+				escape_html(ob, text->data, ci);
+			rndr_cursor_marker(ob, opaque, srcmap, text->size, effective_cursor_pos_index);
+			if (text->size > ci)
+				escape_html(ob, text->data + ci, text->size - ci);
+		} else { // Cursor is NOT contained in this text
+			escape_html(ob, text->data, text->size);
+		}
+	}
 
 	BUFPUTSL(ob, "</code></pre>\n");
+
+	dom_node->close_tag_length = 6;
+	dom_node->content_length = ob->size - 7 - dom_node->content_offset;
+	buf_append_dom_node(ob, dom_node);
 }
 
 static void
 rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (ob->size) bufputc(ob, '\n');
+	struct dom_node *dom_node = dom_new_node("blockquote", ob->size, (text? text->dom : 0));
 	BUFPUTSL(ob, "<blockquote>\n");
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = (text? text->size : 0);
+	dom_node->close_tag_length = 13;
+	buf_append_dom_node(ob, dom_node);
 	if (text) bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</blockquote>\n");
 }
 
 static int
-rndr_codespan(struct buf *ob, const struct buf *text, void *opaque)
+rndr_codespan(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
+	struct dom_node *dom_node = dom_new_node("code", ob->size, (text? text->dom : 0));
 	if (options->flags & HTML_PRETTIFY)
 		BUFPUTSL(ob, "<code class=\"prettyprint\">");
 	else
 		BUFPUTSL(ob, "<code>");
-	if (text) escape_html(ob, text->data, text->size);
+	dom_node->content_offset = ob->size;
+
+	if (text) {
+		size_t effective_cursor_pos_index = 0;
+		int ci = index_of_cursor(opaque, srcmap, text->size, &effective_cursor_pos_index);
+		if (ci >= 0) { // Cursor is contained in this text
+			assert(ci <= text->size);
+			if (ci > 0)
+				escape_html(ob, text->data, ci);
+			rndr_cursor_marker(ob, opaque, srcmap, text->size, effective_cursor_pos_index);
+			if (text->size > ci)
+				escape_html(ob, text->data + ci, text->size - ci);
+		} else { // Cursor is NOT contained in this text
+			escape_html(ob, text->data, text->size);
+		}
+	}
+
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 7;
+	buf_append_dom_node(ob, dom_node);
 	BUFPUTSL(ob, "</code>");
 	return 1;
 }
@@ -189,7 +247,12 @@ rndr_strikethrough(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
+	struct dom_node *dom_node = dom_new_node("del", ob->size, text->dom);
 	BUFPUTSL(ob, "<del>");
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 6;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</del>");
 	return 1;
@@ -201,7 +264,12 @@ rndr_double_emphasis(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
+	struct dom_node *dom_node = dom_new_node("strong", ob->size, text->dom);
 	BUFPUTSL(ob, "<strong>");
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 9;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</strong>");
 
@@ -212,7 +280,12 @@ static int
 rndr_emphasis(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (!text || !text->size) return 0;
+	struct dom_node *dom_node = dom_new_node("em", ob->size, text->dom);
 	BUFPUTSL(ob, "<em>");
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 	if (text) bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</em>");
 	return 1;
@@ -224,7 +297,12 @@ rndr_underline(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
+	struct dom_node *dom_node = dom_new_node("u", ob->size, text->dom);
 	BUFPUTSL(ob, "<u>");
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 4;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</u>");
 
@@ -237,7 +315,12 @@ rndr_highlight(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
+	struct dom_node *dom_node = dom_new_node("mark", ob->size, text->dom);
 	BUFPUTSL(ob, "<mark>");
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 7;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</mark>");
 
@@ -250,7 +333,12 @@ rndr_quote(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
+	struct dom_node *dom_node = dom_new_node("q", ob->size, text->dom);
 	BUFPUTSL(ob, "<q>");
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 4;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</q>");
 
@@ -261,37 +349,58 @@ static int
 rndr_linebreak(struct buf *ob, void *opaque)
 {
 	struct html_renderopt *options = opaque;
+	buf_append_dom_node(ob, dom_new_node("br", ob->size, 0));
 	bufputs(ob, USE_XHTML(options) ? "<br/>\n" : "<br>\n");
 	return 1;
 }
 
 char *header_anchor(struct buf *text)
 {
-	VALUE str = rb_str_new2(bufcstr(text));
-	VALUE space_regex = rb_reg_new(" +", 2 /* length */, 0);
-	VALUE tags_regex = rb_reg_new("<\\/?[^>]*>", 10, 0);
+    assert(0); // We don't use redcarpet in TOC mode, so we'll never call this function
+    return "";
+	// VALUE str = rb_str_new2(bufcstr(text));
+	// VALUE space_regex = rb_reg_new(" +", 2 /* length */, 0);
+	// VALUE tags_regex = rb_reg_new("<\\/?[^>]*>", 10, 0);
 
-	VALUE heading = rb_funcall(str, rb_intern("gsub"), 2, space_regex, rb_str_new2("-"));
-	heading = rb_funcall(heading, rb_intern("gsub"), 2, tags_regex, rb_str_new2(""));
-	heading = rb_funcall(heading, rb_intern("downcase"), 0);
+	// VALUE heading = rb_funcall(str, rb_intern("gsub"), 2, space_regex, rb_str_new2("-"));
+	// heading = rb_funcall(heading, rb_intern("gsub"), 2, tags_regex, rb_str_new2(""));
+	// heading = rb_funcall(heading, rb_intern("downcase"), 0);
 
-	return StringValueCStr(heading);
+	// return StringValueCStr(heading);
 }
 
 static void
-rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque)
+rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque,
+			srcmap_t *srcmap, size_t srcmap_len, size_t srcmap_content_offset, size_t srcmap_content_len)
 {
 	struct html_renderopt *options = opaque;
 
 	if (ob->size)
 		bufputc(ob, '\n');
 
+	const char *h[] = { "", "h1", "h2", "h3", "h4", "h5", "h6" };
+	assert(level > 0);
+	assert(level <= 6);
+	struct dom_node *dom_node = dom_new_node(h[level], ob->size, (text? text->dom : 0));
+
 	if ((options->flags & HTML_TOC) && (level <= options->toc_data.nesting_level))
 		bufprintf(ob, "<h%d id=\"%s\">", level, header_anchor(text));
 	else
 		bufprintf(ob, "<h%d>", level);
 
+	dom_node->content_offset = ob->size;
+
+	// If cursor is in leading ###s, add marker before the header content
+	rndr_cursor_marker(ob, opaque, srcmap, srcmap_content_offset, srcmap_content_offset - 1);
 	if (text) bufput(ob, text->data, text->size);
+	// If cursor is in trailing ###s or ===s, add marker after the header content
+	rndr_cursor_marker(ob, opaque, srcmap + srcmap_content_offset + srcmap_content_len,
+					   srcmap_len - srcmap_content_offset - srcmap_content_len, 0);
+
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
+
 	bufprintf(ob, "</h%d>\n", level);
 }
 
@@ -302,6 +411,8 @@ rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const
 
 	if (link != NULL && (options->flags & HTML_SAFELINK) != 0 && !sd_autolink_issafe(link->data, link->size))
 		return 0;
+
+	struct dom_node *dom_node = dom_new_node("a", ob->size, (content? content->dom : 0));
 
 	BUFPUTSL(ob, "<a href=\"");
 
@@ -321,6 +432,11 @@ rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const
 		BUFPUTSL(ob, "\">");
 	}
 
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = (content? content->size : 0);
+	dom_node->close_tag_length = 4;
+	buf_append_dom_node(ob, dom_node);
+
 	if (content && content->size) bufput(ob, content->data, content->size);
 	BUFPUTSL(ob, "</a>");
 	return 1;
@@ -330,7 +446,12 @@ static void
 rndr_list(struct buf *ob, const struct buf *text, int flags, void *opaque)
 {
 	if (ob->size) bufputc(ob, '\n');
+	struct dom_node *dom_node = dom_new_node(flags & MKD_LIST_ORDERED ? "ol" : "ul", ob->size, (text? text->dom : 0));
 	bufput(ob, flags & MKD_LIST_ORDERED ? "<ol>\n" : "<ul>\n", 5);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = (text? text->size : 0);
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 	if (text) bufput(ob, text->data, text->size);
 	bufput(ob, flags & MKD_LIST_ORDERED ? "</ol>\n" : "</ul>\n", 6);
 }
@@ -338,7 +459,9 @@ rndr_list(struct buf *ob, const struct buf *text, int flags, void *opaque)
 static void
 rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque)
 {
+	struct dom_node *dom_node = dom_new_node("li", ob->size, (text? text->dom : 0));
 	BUFPUTSL(ob, "<li>");
+	dom_node->content_offset = ob->size;
 	if (text) {
 		size_t size = text->size;
 		while (size && text->data[size - 1] == '\n')
@@ -347,6 +470,9 @@ rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque)
 		bufput(ob, text->data, size);
 	}
 	BUFPUTSL(ob, "</li>\n");
+	dom_node->close_tag_length = 5;
+	dom_node->content_length = ob->size - 6 - dom_node->content_offset;
+	buf_append_dom_node(ob, dom_node);
 }
 
 static void
@@ -365,7 +491,9 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque)
 	if (i == text->size)
 		return;
 
+	struct dom_node *dom_node = dom_new_node("p", ob->size, text->dom);
 	BUFPUTSL(ob, "<p>");
+	dom_node->content_offset = ob->size;
 	if (options->flags & HTML_HARD_WRAP) {
 		size_t org;
 		while (i < text->size) {
@@ -390,10 +518,13 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque)
 		bufput(ob, &text->data[i], text->size - i);
 	}
 	BUFPUTSL(ob, "</p>\n");
+	dom_node->close_tag_length = 4;
+	dom_node->content_length = ob->size - 5 - dom_node->content_offset;
+	buf_append_dom_node(ob, dom_node);
 }
 
 static void
-rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque)
+rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap, void *shl)
 {
 	size_t org, sz;
 	if (!text) return;
@@ -403,7 +534,7 @@ rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque)
 	while (org < sz && text->data[org] == '\n') org++;
 	if (org >= sz) return;
 	if (ob->size) bufputc(ob, '\n');
-	bufput(ob, text->data + org, sz - org);
+	add_raw_html_block(ob, (const char *) text->data + org, sz - org, srcmap + org, shl, opaque);
 	bufputc(ob, '\n');
 }
 
@@ -411,9 +542,14 @@ static int
 rndr_triple_emphasis(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (!text || !text->size) return 0;
+	struct dom_node *dom_node = dom_new_node("strong", ob->size, (text? text->dom : 0));
+	dom_node->content_offset = ob->size + 8;
 	BUFPUTSL(ob, "<strong><em>");
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</em></strong>");
+	dom_node->close_tag_length = 9;
+	dom_node->content_length = ob->size - dom_node->close_tag_length - dom_node->content_offset;
+	buf_append_dom_node(ob, dom_node);
 	return 1;
 }
 
@@ -422,6 +558,7 @@ rndr_hrule(struct buf *ob, void *opaque)
 {
 	struct html_renderopt *options = opaque;
 	if (ob->size) bufputc(ob, '\n');
+	buf_append_dom_node(ob, dom_new_node("hr", ob->size, 0));
 	bufputs(ob, USE_XHTML(options) ? "<hr/>\n" : "<hr>\n");
 }
 
@@ -430,6 +567,8 @@ rndr_image(struct buf *ob, const struct buf *link, const struct buf *title, cons
 {
 	struct html_renderopt *options = opaque;
 	if (!link || !link->size) return 0;
+
+	buf_append_dom_node(ob, dom_new_node("img", ob->size, 0));
 
 	BUFPUTSL(ob, "<img src=\"");
 	escape_href(ob, link->data, link->size);
@@ -447,7 +586,7 @@ rndr_image(struct buf *ob, const struct buf *link, const struct buf *title, cons
 }
 
 static int
-rndr_raw_html(struct buf *ob, const struct buf *text, void *opaque)
+rndr_raw_html(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap, void *shl)
 {
 	struct html_renderopt *options = opaque;
 
@@ -473,7 +612,8 @@ rndr_raw_html(struct buf *ob, const struct buf *text, void *opaque)
 		sdhtml_is_tag(text->data, text->size, "img"))
 		return 1;
 
-	bufput(ob, text->data, text->size);
+	add_raw_html_tag(ob, (const char *) text->data, text->size, srcmap, shl, opaque);
+
 	return 1;
 }
 
@@ -481,27 +621,68 @@ static void
 rndr_table(struct buf *ob, const struct buf *header, const struct buf *body, void *opaque)
 {
 	if (ob->size) bufputc(ob, '\n');
+
+	struct dom_node *thead_node = dom_new_node("thead", 0, (header? header->dom : 0));
+	struct dom_node *table_node = dom_new_node("table", ob->size, thead_node);
+	table_node->content_offset = ob->size + 7;
+	size_t thead_content_offset = 0, tbody_content_offset = 0;
+
 	BUFPUTSL(ob, "<table><thead>\n");
+
+	thead_content_offset = ob->size;
+	thead_node->content_offset = thead_content_offset - table_node->content_offset;
+
 	if (header)
 		bufput(ob, header->data, header->size);
+
+	thead_node->content_length = ob->size - thead_content_offset;
+	thead_node->close_tag_length = 8;
+	size_t tbody_elem_offset = thead_node->content_offset + thead_node->content_length + thead_node->close_tag_length;
+	struct dom_node *tbody_node = dom_new_node("tbody", tbody_elem_offset, (body? body->dom : 0));
+	thead_node->next = tbody_node;
+
 	BUFPUTSL(ob, "</thead><tbody>\n");
+
+	tbody_content_offset = ob->size;
+	tbody_node->content_offset = tbody_content_offset - table_node->content_offset;
+
 	if (body)
 		bufput(ob, body->data, body->size);
+
+	tbody_node->content_length = ob->size - tbody_content_offset;
+	tbody_node->close_tag_length = 8;
+	table_node->content_length = ob->size + 8 - table_node->content_offset;
+
 	BUFPUTSL(ob, "</tbody></table>\n");
+
+	table_node->close_tag_length = 8;
+	buf_append_dom_node(ob, table_node);
 }
 
 static void
 rndr_tablerow(struct buf *ob, const struct buf *text, void *opaque)
 {
+	struct dom_node *dom_node = dom_new_node("tr", ob->size, (text? text->dom : 0));
+
 	BUFPUTSL(ob, "<tr>\n");
+
+	dom_node->content_offset = ob->size;
+
 	if (text)
 		bufput(ob, text->data, text->size);
+
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
+
 	BUFPUTSL(ob, "</tr>\n");
 }
 
 static void
 rndr_tablecell(struct buf *ob, const struct buf *text, int flags, void *opaque)
 {
+	struct dom_node *dom_node = dom_new_node(flags & MKD_TABLE_HEADER? "th" : "td", ob->size, (text? text->dom : 0));
+
 	if (flags & MKD_TABLE_HEADER) {
 		BUFPUTSL(ob, "<th");
 	} else {
@@ -525,8 +706,14 @@ rndr_tablecell(struct buf *ob, const struct buf *text, int flags, void *opaque)
 		BUFPUTSL(ob, ">");
 	}
 
+	dom_node->content_offset = ob->size;
+
 	if (text)
 		bufput(ob, text->data, text->size);
+
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 
 	if (flags & MKD_TABLE_HEADER) {
 		BUFPUTSL(ob, "</th>\n");
@@ -539,17 +726,35 @@ static int
 rndr_superscript(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (!text || !text->size) return 0;
+
+	struct dom_node *dom_node = dom_new_node("mark", ob->size, text->dom);
 	BUFPUTSL(ob, "<sup>");
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 6;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</sup>");
 	return 1;
 }
 
 static void
-rndr_normal_text(struct buf *ob, const struct buf *text, void *opaque)
+rndr_normal_text(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap)
 {
-	if (text)
-		escape_html(ob, text->data, text->size);
+	if (text) {
+		size_t effective_cursor_pos_index = 0;
+		int ci = index_of_cursor(opaque, srcmap, text->size, &effective_cursor_pos_index);
+		if (ci >= 0) { // Cursor is contained in this text
+			assert(ci <= text->size);
+			if (ci > 0)
+				escape_html(ob, text->data, ci);
+			rndr_cursor_marker(ob, opaque, srcmap, text->size, effective_cursor_pos_index);
+			if (text->size > ci)
+				escape_html(ob, text->data + ci, text->size - ci);
+		} else { // Cursor is NOT contained in this text
+			escape_html(ob, text->data, text->size);
+		}
+	}
 }
 
 static void
@@ -558,6 +763,8 @@ rndr_footnotes(struct buf *ob, const struct buf *text, void *opaque)
 	struct html_renderopt *options = opaque;
 
 	if (ob->size) bufputc(ob, '\n');
+
+	buf_append_dom_node(ob, dom_new_node("div", ob->size, 0)); // No need to get inside this div
 
 	BUFPUTSL(ob, "<div class=\"footnotes\">\n");
 	bufputs(ob, USE_XHTML(options) ? "<hr/>\n" : "<hr>\n");
@@ -597,11 +804,13 @@ rndr_footnote_def(struct buf *ob, const struct buf *text, unsigned int num, void
 		bufput(ob, text->data, text->size);
 	}
 	BUFPUTSL(ob, "</li>\n");
+	// This need not be DOM-ed because the top-level div containing this list is DOM-ed
 }
 
 static int
 rndr_footnote_ref(struct buf *ob, unsigned int num, void *opaque)
 {
+	buf_append_dom_node(ob, dom_new_node("sup", ob->size, 0));
 	bufprintf(ob, "<sup id=\"fnref%d\"><a href=\"#fn%d\" rel=\"footnote\">%d</a></sup>", num, num, num);
 	return 1;
 }
@@ -699,6 +908,8 @@ sdhtml_toc_renderer(struct sd_callbacks *callbacks, struct html_renderopt *optio
 
 		NULL,
 		toc_finalize,
+
+		NULL,
 	};
 
 	memset(options, 0x0, sizeof(struct html_renderopt));
@@ -747,6 +958,8 @@ sdhtml_renderer(struct sd_callbacks *callbacks, struct html_renderopt *options, 
 
 		NULL,
 		NULL,
+
+		rndr_cursor_marker,
 	};
 
 	/* Prepare the options pointer */
