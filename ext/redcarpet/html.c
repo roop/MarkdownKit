@@ -17,7 +17,7 @@
 
 #include "markdown.h"
 #include "html.h"
-#include "ruby.h"
+// #include "ruby.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -267,15 +267,16 @@ rndr_linebreak(struct buf *ob, void *opaque)
 
 char *header_anchor(struct buf *text)
 {
-	VALUE str = rb_str_new2(bufcstr(text));
-	VALUE space_regex = rb_reg_new(" +", 2 /* length */, 0);
-	VALUE tags_regex = rb_reg_new("<\\/?[^>]*>", 10, 0);
+    return "";
+	// VALUE str = rb_str_new2(bufcstr(text));
+	// VALUE space_regex = rb_reg_new(" +", 2 /* length */, 0);
+	// VALUE tags_regex = rb_reg_new("<\\/?[^>]*>", 10, 0);
 
-	VALUE heading = rb_funcall(str, rb_intern("gsub"), 2, space_regex, rb_str_new2("-"));
-	heading = rb_funcall(heading, rb_intern("gsub"), 2, tags_regex, rb_str_new2(""));
-	heading = rb_funcall(heading, rb_intern("downcase"), 0);
+	// VALUE heading = rb_funcall(str, rb_intern("gsub"), 2, space_regex, rb_str_new2("-"));
+	// heading = rb_funcall(heading, rb_intern("gsub"), 2, tags_regex, rb_str_new2(""));
+	// heading = rb_funcall(heading, rb_intern("downcase"), 0);
 
-	return StringValueCStr(heading);
+	// return StringValueCStr(heading);
 }
 
 static void
