@@ -42,6 +42,9 @@ struct buf {
 	size_t size;	/* size of the string */
 	size_t asize;	/* allocated size (0 = volatile buffer) */
 	size_t unit;	/* reallocation unit size (0 = read-only buffer) */
+	/* Extended by roop */
+	size_t *srcmap; /* byte-indices into the original markdown source */
+	int is_srcmap_enabled;
 };
 
 /* BUFPUTSL: optimized bufputs of a string literal */
@@ -53,6 +56,7 @@ int bufgrow(struct buf *, size_t);
 
 /* bufnew: allocation of a new buffer */
 struct buf *bufnew(size_t) __attribute__ ((malloc));
+struct buf *bufnewsm(size_t) __attribute__ ((malloc));
 
 /* bufnullterm: NUL-termination of the string array (making a C-string) */
 const char *bufcstr(struct buf *);
@@ -62,6 +66,7 @@ int bufprefix(const struct buf *buf, const char *prefix);
 
 /* bufput: appends raw data to a buffer */
 void bufput(struct buf *, const void *, size_t);
+void bufputsm(struct buf *, const void *data, const size_t *srcmap, size_t offset, size_t len);
 
 /* bufputs: appends a NUL-terminated string to a buffer */
 void bufputs(struct buf *, const char *);
@@ -74,6 +79,9 @@ void bufrelease(struct buf *);
 
 /* bufprintf: formatted printing to a buffer */
 void bufprintf(struct buf *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
+
+/* Debugging srcmap */
+void bufdebugsm(struct buf *);
 
 #ifdef __cplusplus
 }

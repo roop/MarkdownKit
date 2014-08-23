@@ -72,6 +72,19 @@ bufgrow(struct buf *buf, size_t neosz)
 		return BUF_ENOMEM;
 
 	buf->data = neodata;
+
+	if (buf->is_srcmap_enabled) {
+		buf->srcmap = realloc(buf->srcmap, neoasz * sizeof(size_t));
+		if (!buf->srcmap) {
+			return BUF_ENOMEM;
+		}
+		// Init unassigned bytes in the srcmap to -1 (which indicates
+		// that the byte cannot be mapped to the Markdown source)
+		for (size_t i = buf->asize; i < neoasz; i++) {
+			buf->srcmap[i] = (size_t) (-1);
+		}
+	}
+
 	buf->asize = neoasz;
 	return BUF_OK;
 }
@@ -88,9 +101,24 @@ bufnew(size_t unit)
 		ret->data = 0;
 		ret->size = ret->asize = 0;
 		ret->unit = unit;
+		ret->is_srcmap_enabled = 0;
+		ret->srcmap = 0;
 	}
 	return ret;
 }
+
+struct buf *
+bufnewsm(size_t unit)
+{
+	struct buf *ret;
+	ret = bufnew(unit);
+
+	if (ret) {
+		ret->is_srcmap_enabled = 1;
+	}
+	return ret;
+}
+
 
 /* bufnullterm: NULL-termination of the string array */
 const char *
@@ -152,15 +180,24 @@ bufprintf(struct buf *buf, const char *fmt, ...)
 
 /* bufput: appends raw data to a buffer */
 void
-bufput(struct buf *buf, const void *data, size_t len)
+bufputsm(struct buf *buf, const void *data, const size_t *srcmap, size_t offset, size_t len)
 {
 	assert(buf && buf->unit);
 
 	if (buf->size + len > buf->asize && bufgrow(buf, buf->size + len) < 0)
 		return;
 
-	memcpy(buf->data + buf->size, data, len);
+	memcpy(buf->data + buf->size, data + offset, len);
+	if (srcmap && buf->srcmap)
+		memcpy(buf->srcmap + buf->size, srcmap + offset, len * sizeof(size_t));
+
 	buf->size += len;
+}
+
+void
+bufput(struct buf *buf, const void *data, size_t len)
+{
+	bufputsm(buf, data, (const size_t *) 0, (size_t) 0, len);
 }
 
 /* bufputs: appends a NUL-terminated string to a buffer */
@@ -192,5 +229,21 @@ bufrelease(struct buf *buf)
 		return;
 
 	free(buf->data);
+	free(buf->srcmap);
 	free(buf);
+}
+
+void bufdebugsm(struct buf *buf)
+{
+	for (int i = 0; i < buf->size; i++) {
+		if (buf->data[i] == '\n')
+			printf("\\n ");
+		else
+			printf(" %c ", buf->data[i]);
+	}
+	printf("\n");
+	for (int i = 0; i < buf->size; i++) {
+		printf("%2d ", (int) buf->srcmap[i]);
+	}
+	printf("\n");
 }
