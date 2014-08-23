@@ -2696,19 +2696,29 @@ is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_re
 	return 1;
 }
 
-static void expand_tabs(struct buf *ob, const uint8_t *line, size_t size)
+static void expand_tabs(struct buf *ob, const uint8_t *line, size_t offset, size_t size)
 {
 	size_t  i = 0, tab = 0;
 
 	while (i < size) {
 		size_t org = i;
 
-		while (i < size && line[i] != '\t') {
+		while (i < size && line[offset + i] != '\t') {
 			i++; tab++;
 		}
 
-		if (i > org)
-			bufput(ob, line + org, i - org);
+		if (i > org) {
+			size_t orig_ob_size = ob->size;
+			bufput(ob, line + offset + org, i - org);
+
+			size_t *sm = ob->srcmap + orig_ob_size;
+			size_t offset_plus_org = offset + org;
+			size_t smlen = (i - org);
+			while (smlen--) {
+				*sm++ = offset_plus_org++;
+			}
+			// FIXME: Handle multi-byte chars
+		}
 
 		if (i >= size)
 			break;
@@ -2799,7 +2809,7 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 	struct buf *text;
 	size_t beg, end;
 
-	text = bufnew(64);
+	text = bufnewsm(64);
 	if (!text)
 		return;
 
@@ -2837,7 +2847,7 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 
 			/* adding the line body if present */
 			if (end > beg)
-				expand_tabs(text, document + beg, end - beg);
+				expand_tabs(text, document, beg, end - beg);
 
 			while (end < doc_size && (document[end] == '\n' || document[end] == '\r')) {
 				/* add one \n per newline */
