@@ -2849,10 +2849,12 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 			if (end > beg)
 				expand_tabs(text, document, beg, end - beg);
 
-			while (end < doc_size && (document[end] == '\n' || document[end] == '\r')) {
+			assert(document[end] != '\r'); // Unlike normal redcarpet, we don't expect to see CR or CRLF here
+			while (end < doc_size && (document[end] == '\n')) {
 				/* add one \n per newline */
-				if (document[end] == '\n' || (end + 1 < doc_size && document[end + 1] != '\n'))
-					bufputc(text, '\n');
+				size_t *sm = text->srcmap + text->size;
+				bufputc(text, '\n');
+				*sm = end;
 				end++;
 			}
 
