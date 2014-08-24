@@ -20,7 +20,7 @@
 #include "markdown.h"
 #include "stack.h"
 
-#include "SyntaxHighlighting.h"
+#include "shl.h"
 
 #include <assert.h>
 #include <string.h>
@@ -149,7 +149,7 @@ struct sd_markdown {
 	size_t max_nesting;
 	int in_link_body;
 
-	void *shl; /* SyntaxHighlightDelegate in Obj-C */
+	void *shl; /* Used for sending syntax highlight date to Obj-C */
 };
 
 /***************************
