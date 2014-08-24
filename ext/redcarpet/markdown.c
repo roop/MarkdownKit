@@ -469,7 +469,7 @@ parse_inline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t siz
 	uint8_t action = 0;
 	struct buf work = { 0, 0, 0, 0 };
 
-	shlset(rndr->shl, srcmap, size, SHL_TEXT);
+	shlset(rndr->shl, srcmap, size, SHL_TEXT_CONTENT);
 
 	if (rndr->work_bufs[BUFFER_SPAN].size +
 		rndr->work_bufs[BUFFER_BLOCK].size > rndr->max_nesting)
@@ -1989,7 +1989,7 @@ parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 	while (level < size && level < 6 && data[level] == '#')
 		level++;
 
-	shlset(rndr->shl, srcmap, level, SHL_ATX_HEADER);
+	shlset(rndr->shl, srcmap, level, SHL_ATX_HEADER_HASH);
 
 	for (i = level; i < size && data[i] == ' '; i++);
 
@@ -1999,7 +1999,7 @@ parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 	while (end && data[end - 1] == '#')
 		end--;
 
-	shlset(rndr->shl, srcmap + end, skip - end, SHL_ATX_HEADER);
+	shlset(rndr->shl, srcmap + end, skip - end, SHL_ATX_HEADER_HASH);
 
 	while (end && data[end - 1] == ' ')
 		end--;
@@ -2008,6 +2008,7 @@ parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 		struct buf *work = rndr_newbuf(rndr, BUFFER_SPAN);
 
 		parse_inline(work, rndr, data + i, end - i, srcmap + i);
+		shlset(rndr->shl, srcmap + i, end - i, SHL_HEADER_CONTENT);
 
 		if (rndr->cb.header)
 			rndr->cb.header(ob, work, (int)level, rndr->opaque);
