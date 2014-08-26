@@ -86,22 +86,22 @@ struct footnote_list {
 /*   offset is the number of valid chars before data */
 struct sd_markdown;
 typedef size_t
-(*char_trigger)(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
+(*char_trigger)(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
 
-static size_t char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
+static size_t char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
 static size_t char_underline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
 static size_t char_highlight(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
+static size_t char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
+static size_t char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap);
 
 enum markdown_char_t {
 	MD_CHAR_NONE = 0,
@@ -493,7 +493,8 @@ parse_inline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t siz
 		if (end >= size) break;
 		i = end;
 
-		end = markdown_char_ptrs[(int)action](ob, rndr, data + i, i, size - i);
+		end = markdown_char_ptrs[(int)action](ob, rndr, data + i, i, size - i, srcmap + i);
+
 		if (!end) /* no action from the callback */
 			end = i + 1;
 		else {
@@ -597,7 +598,7 @@ find_emph_char(uint8_t *data, size_t size, uint8_t c)
 /* parse_emph1 • parsing single emphase */
 /* closed by a symbol not preceded by whitespace and not followed by symbol */
 static size_t
-parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, uint8_t c)
+parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, uint8_t c)
 {
 	size_t i = 0, len;
 	struct buf *work = 0;
@@ -620,12 +621,20 @@ parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			}
 
 			work = rndr_newbuf(rndr, BUFFER_SPAN);
-			parse_inline(work, rndr, data, i, 0); // FIXME: srcmap
+			parse_inline(work, rndr, data, i, srcmap);
 
-			if (rndr->ext_flags & MKDEXT_UNDERLINE && c == '_')
+			if (rndr->ext_flags & MKDEXT_UNDERLINE && c == '_') {
 				r = rndr->cb.underline(ob, work, rndr->opaque);
-			else
+				if (r)
+					shlset(rndr->shl, srcmap, i, SHL_UNDERLINE_CONTENT);
+			} else {
 				r = rndr->cb.emphasis(ob, work, rndr->opaque);
+				if (r)
+					shlset(rndr->shl, srcmap, i, SHL_EM_CONTENT);
+			}
+
+			if (r)
+				shlset(rndr->shl, srcmap + i, 1, SHL_EMPHASIS_CHAR); // Closing "*"
 
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			return r ? i + 1 : 0;
@@ -637,7 +646,7 @@ parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 
 /* parse_emph2 • parsing single emphase */
 static size_t
-parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, uint8_t c)
+parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, uint8_t c)
 {
 	size_t i = 0, len;
 	struct buf *work = 0;
@@ -650,14 +659,24 @@ parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 
 		if (i + 1 < size && data[i] == c && data[i + 1] == c && i && !_isspace(data[i - 1])) {
 			work = rndr_newbuf(rndr, BUFFER_SPAN);
-			parse_inline(work, rndr, data, i, 0); // FIXME: srcmap
+			parse_inline(work, rndr, data, i, srcmap);
 
-			if (c == '~')
+			if (c == '~') {
 				r = rndr->cb.strikethrough(ob, work, rndr->opaque);
-			else if (c == '=')
+				if (r)
+					shlset(rndr->shl, srcmap, i, SHL_STRIKETHROUGH_CONTENT);
+			} else if (c == '=') {
 				r = rndr->cb.highlight(ob, work, rndr->opaque);
-			else
+				if (r)
+					shlset(rndr->shl, srcmap, i, SHL_HIGHLIGHT_CONTENT);
+			} else {
 				r = rndr->cb.double_emphasis(ob, work, rndr->opaque);
+				if (r)
+					shlset(rndr->shl, srcmap, i, SHL_STRONG_CONTENT);
+			}
+
+			if (r)
+				shlset(rndr->shl, srcmap + i, 2, SHL_EMPHASIS_CHAR); // Closing "**"
 
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			return r ? i + 2 : 0;
@@ -670,7 +689,7 @@ parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 /* parse_emph3 • parsing single emphase */
 /* finds the first closing tag, and delegates to the other emph */
 static size_t
-parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, uint8_t c)
+parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, uint8_t c)
 {
 	size_t i = 0, len;
 	int r;
@@ -688,20 +707,32 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			/* triple symbol found */
 			struct buf *work = rndr_newbuf(rndr, BUFFER_SPAN);
 
-			parse_inline(work, rndr, data, i, 0); // FIXME: srcmap
+			parse_inline(work, rndr, data, i, srcmap);
+
 			r = rndr->cb.triple_emphasis(ob, work, rndr->opaque);
+
+			if (r) {
+				shlset(rndr->shl, srcmap, i, SHL_EM_CONTENT);
+				shlset(rndr->shl, srcmap, i, SHL_STRONG_CONTENT);
+				shlset(rndr->shl, srcmap + i, 3, SHL_EMPHASIS_CHAR); // Closing "***"
+			}
+
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			return r ? i + 3 : 0;
 
 		} else if (i + 1 < size && data[i + 1] == c) {
 			/* double symbol found, handing over to emph1 */
-			len = parse_emph1(ob, rndr, data - 2, size + 2, c);
+			len = parse_emph1(ob, rndr, data - 2, size + 2, srcmap - 2, c);
+			if (len)
+				shlset(rndr->shl, srcmap - 3, 1, SHL_EMPHASIS_CHAR); // Opening "*"
 			if (!len) return 0;
 			else return len - 2;
 
 		} else {
 			/* single symbol found, handing over to emph2 */
-			len = parse_emph2(ob, rndr, data - 1, size + 1, c);
+			len = parse_emph2(ob, rndr, data - 1, size + 1, srcmap - 1, c);
+			if (len)
+				shlset(rndr->shl, srcmap - 3, 2, SHL_EMPHASIS_CHAR); // Opening "**"
 			if (!len) return 0;
 			else return len - 1;
 		}
@@ -711,7 +742,7 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 
 /* char_emphasis • single and double emphasis parsing */
 static size_t
-char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
 	uint8_t c = data[0];
 	size_t ret;
@@ -724,23 +755,26 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	if (size > 2 && data[1] != c) {
 		/* whitespace cannot follow an opening emphasis;
 		 * strikethrough only takes two characters '~~' */
-		if (c == '~' || c == '=' || _isspace(data[1]) || (ret = parse_emph1(ob, rndr, data + 1, size - 1, c)) == 0)
+		if (c == '~' || c == '=' || _isspace(data[1]) || (ret = parse_emph1(ob, rndr, data + 1, size - 1, srcmap + 1, c)) == 0)
 			return 0;
 
+		shlset(rndr->shl, srcmap, 1, SHL_EMPHASIS_CHAR); // Opening "*"
 		return ret + 1;
 	}
 
 	if (size > 3 && data[1] == c && data[2] != c) {
-		if (_isspace(data[2]) || (ret = parse_emph2(ob, rndr, data + 2, size - 2, c)) == 0)
+		if (_isspace(data[2]) || (ret = parse_emph2(ob, rndr, data + 2, size - 2, srcmap + 2, c)) == 0)
 			return 0;
 
+		shlset(rndr->shl, srcmap, 2, SHL_EMPHASIS_CHAR); // Opening "**"
 		return ret + 2;
 	}
 
 	if (size > 4 && data[1] == c && data[2] == c && data[3] != c) {
-		if (c == '~' || c == '=' || _isspace(data[3]) || (ret = parse_emph3(ob, rndr, data + 3, size - 3, c)) == 0)
+		if (c == '~' || c == '=' || _isspace(data[3]) || (ret = parse_emph3(ob, rndr, data + 3, size - 3, srcmap + 3, c)) == 0)
 			return 0;
 
+		shlset(rndr->shl, srcmap, 3, SHL_EMPHASIS_CHAR); // Opening "***"
 		return ret + 3;
 	}
 
@@ -750,8 +784,9 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 
 /* char_linebreak • '\n' preceded by two spaces (assuming linebreak != 0) */
 static size_t
-char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
+	(void) srcmap; // unused
 	if (offset < 2 || data[-1] != ' ' || data[-2] != ' ')
 		return 0;
 
@@ -765,7 +800,7 @@ char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t o
 
 /* char_codespan • '`' parsing a code span (assuming codespan != 0) */
 static size_t
-char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
 	size_t end, nb = 0, i, f_begin, f_end;
 
@@ -783,6 +818,9 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	if (i < nb && end >= size)
 		return 0; /* no matching delimiter */
 
+	shlset(rndr->shl, srcmap, nb, SHL_CODE_SPAN_CHAR); // Opening backticks
+	shlset(rndr->shl, srcmap + end - nb, nb, SHL_CODE_SPAN_CHAR); // Closing backticks
+
 	/* trimming outside whitespaces */
 	f_begin = nb;
 	while (f_begin < end && data[f_begin] == ' ')
@@ -795,6 +833,7 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	/* real code span */
 	if (f_begin < f_end) {
 		struct buf work = { data + f_begin, f_end - f_begin, 0, 0 };
+		shlset(rndr->shl, srcmap + f_begin, f_end - f_begin, SHL_CODE_SPAN_CONTENT);
 		if (!rndr->cb.codespan(ob, &work, rndr->opaque))
 			end = 0;
 	} else {
@@ -807,8 +846,9 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 
 /* char_quote • '"' parsing a quote */
 static size_t
-char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
+	(void) srcmap; // Unused
 	size_t end, nq = 0, i, f_begin, f_end;
 
 	/* counting the number of quotes in the delimiter */
@@ -850,8 +890,9 @@ char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offse
 
 /* char_escape • '\\' backslash escape */
 static size_t
-char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
+	(void) srcmap; // Unused
 	static const char *escape_chars = "\\`*_{}[]()#+-.!:|&<>^~";
 	struct buf work = { 0, 0, 0, 0 };
 
@@ -875,8 +916,9 @@ char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offs
 /* char_entity • '&' escaped when it doesn't belong to an entity */
 /* valid entities are assumed to be anything matching &#?[A-Za-z0-9]+; */
 static size_t
-char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
+	(void) srcmap; // Unused
 	size_t end = 1;
 	struct buf work = { 0, 0, 0, 0 };
 
@@ -903,7 +945,7 @@ char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offs
 
 /* char_langle_tag • '<' when tags or autolinks are allowed */
 static size_t
-char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
 	enum mkd_autolink altype = MKDA_NOT_AUTOLINK;
 	size_t end = tag_length(data, size, &altype);
@@ -918,6 +960,9 @@ char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 			unscape_text(u_link, &work);
 			ret = rndr->cb.autolink(ob, u_link, altype, rndr->opaque);
 			rndr_popbuf(rndr, BUFFER_SPAN);
+			shlset(rndr->shl, srcmap, 1, SHL_AUTOLINK_ANGLE_BRACKETS); // "<"
+			shlset(rndr->shl, srcmap + 1, end - 2, SHL_AUTOLINKED_URL);
+			shlset(rndr->shl, srcmap + end - 1, 1, SHL_AUTOLINK_ANGLE_BRACKETS); // ">"
 		}
 		else if (rndr->cb.raw_html_tag)
 			ret = rndr->cb.raw_html_tag(ob, &work, rndr->opaque);
@@ -928,7 +973,7 @@ char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 }
 
 static size_t
-char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
 	struct buf *link, *link_url, *link_text;
 	size_t link_len, rewind;
@@ -939,6 +984,7 @@ char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 	link = rndr_newbuf(rndr, BUFFER_SPAN);
 
 	if ((link_len = sd_autolink__www(&rewind, link, data, offset, size, 0)) > 0) {
+		shlset(rndr->shl, srcmap, link_len, SHL_AUTOLINKED_URL);
 		link_url = rndr_newbuf(rndr, BUFFER_SPAN);
 		BUFPUTSL(link_url, "http://");
 		bufput(link_url, link->data, link->size);
@@ -960,7 +1006,7 @@ char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 }
 
 static size_t
-char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
 	struct buf *link;
 	size_t link_len, rewind;
@@ -971,6 +1017,7 @@ char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, siz
 	link = rndr_newbuf(rndr, BUFFER_SPAN);
 
 	if ((link_len = sd_autolink__email(&rewind, link, data, offset, size, 0)) > 0) {
+		shlset(rndr->shl, srcmap - rewind, link_len + rewind, SHL_AUTOLINKED_URL);
 		ob->size -= rewind;
 		rndr->cb.autolink(ob, link, MKDA_EMAIL, rndr->opaque);
 	}
@@ -980,7 +1027,7 @@ char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, siz
 }
 
 static size_t
-char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
 	struct buf *link;
 	size_t link_len, rewind;
@@ -991,6 +1038,7 @@ char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 	link = rndr_newbuf(rndr, BUFFER_SPAN);
 
 	if ((link_len = sd_autolink__url(&rewind, link, data, offset, size, SD_AUTOLINK_SHORT_DOMAINS)) > 0) {
+		shlset(rndr->shl, srcmap - rewind, link_len + rewind, SHL_AUTOLINKED_URL);
 		ob->size -= rewind;
 		rndr->cb.autolink(ob, link, MKDA_NORMAL, rndr->opaque);
 	}
@@ -1001,7 +1049,7 @@ char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 
 /* char_link • '[': parsing a link or an image */
 static size_t
-char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
 	int is_img = (offset && data[-1] == '!'), level;
 	size_t i = 1, txt_e, link_b = 0, link_e = 0, title_b = 0, title_e = 0;
@@ -1076,6 +1124,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 	/* inline style link */
 	if (i < size && data[i] == '(') {
+		size_t open_parens_pos = i;
 		/* skipping initial whitespace */
 		i++;
 
@@ -1131,23 +1180,36 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 			}
 		}
 
+		shlset(rndr->shl, srcmap + open_parens_pos, 1, SHL_LINK_OR_IMG_SYNTAX); // "("
+		shlset(rndr->shl, srcmap + i, 1, SHL_LINK_OR_IMG_SYNTAX); // ")"
+
 		/* remove whitespace at the end of the link */
 		while (link_e > link_b && _isspace(data[link_e - 1]))
 			link_e--;
 
 		/* remove optional angle brackets around the link */
-		if (data[link_b] == '<') link_b++;
-		if (data[link_e - 1] == '>') link_e--;
+		if (data[link_b] == '<') {
+			shlset(rndr->shl, srcmap + link_b, 1, SHL_LINK_OR_IMG_SYNTAX); // <
+			link_b++;
+		}
+		if (data[link_e - 1] == '>') {
+			shlset(rndr->shl, srcmap + link_e - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // >
+			link_e--;
+		}
 
 		/* building escaped link and title */
 		if (link_e > link_b) {
 			link = rndr_newbuf(rndr, BUFFER_SPAN);
 			bufput(link, data + link_b, link_e - link_b);
+			shlset(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_URL);
 		}
 
 		if (title_e > title_b) {
 			title = rndr_newbuf(rndr, BUFFER_SPAN);
 			bufput(title, data + title_b, title_e - title_b);
+			shlset(rndr->shl, srcmap + title_b - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // " or '
+			shlset(rndr->shl, srcmap + title_b, title_e - title_b, SHL_LINK_OR_IMG_TITLE);
+			shlset(rndr->shl, srcmap + title_e, 1, SHL_LINK_OR_IMG_SYNTAX); // " or '
 		}
 
 		i++;
@@ -1190,8 +1252,18 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		}
 
 		lr = find_link_ref(rndr->refs, id.data, id.size);
-		if (!lr)
+		if (!lr) {
+			if (link_b < link_e) {
+				shlset(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // "["
+				shlset(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_UNRESOLVED_REF);
+				shlset(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
+			}
 			goto cleanup;
+		}
+
+		shlset(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // "["
+		shlset(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_REF);
+		shlset(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
 
 		/* keeping link and title from link_ref */
 		link = lr->link;
@@ -1241,12 +1313,18 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		content = rndr_newbuf(rndr, BUFFER_SPAN);
 		if (is_img) {
 			bufput(content, data + 1, txt_e - 1);
+			shlset(rndr->shl, srcmap - 1, 2, SHL_LINK_OR_IMG_SYNTAX); // "!["
+			shlset(rndr->shl, srcmap + 1, txt_e - 1, SHL_IMG_ALT_TEXT);
+			shlset(rndr->shl, srcmap + txt_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
 		} else {
 			/* disable autolinking when parsing inline the
 			 * content of a link */
 			rndr->in_link_body = 1;
-			parse_inline(content, rndr, data + 1, txt_e - 1, 0); // FIXME: srcmap
+			parse_inline(content, rndr, data + 1, txt_e - 1, srcmap + 1);
 			rndr->in_link_body = 0;
+			shlset(rndr->shl, srcmap, 1, SHL_LINK_OR_IMG_SYNTAX); // "["
+			shlset(rndr->shl, srcmap + 1, txt_e - 1, SHL_LINKED_CONTENT);
+			shlset(rndr->shl, srcmap + txt_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
 		}
 	}
 
@@ -1272,7 +1350,7 @@ cleanup:
 }
 
 static size_t
-char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
+char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap)
 {
 	size_t sup_start, sup_len;
 	struct buf *sup;
@@ -1301,8 +1379,15 @@ char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 	if (sup_len - sup_start == 0)
 		return (sup_start == 2) ? 3 : 0;
 
+	if (sup_start == 2) {
+		shlset(rndr->shl, srcmap, 2, SHL_SUPERSCRIPT_SYNTAX); // "^("
+		shlset(rndr->shl, srcmap + sup_len, 1, SHL_SUPERSCRIPT_SYNTAX); // ")"
+	} else if (sup_start == 1) {
+		shlset(rndr->shl, srcmap, 1, SHL_SUPERSCRIPT_SYNTAX); // "^"
+	}
+
 	sup = rndr_newbuf(rndr, BUFFER_SPAN);
-	parse_inline(sup, rndr, data + sup_start, sup_len - sup_start, 0); // FIXME: srcmap
+	parse_inline(sup, rndr, data + sup_start, sup_len - sup_start, srcmap + sup_start);
 	rndr->cb.superscript(ob, sup, rndr->opaque);
 	rndr_popbuf(rndr, BUFFER_SPAN);
 
