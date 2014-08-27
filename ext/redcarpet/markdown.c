@@ -182,6 +182,22 @@ rndr_popbuf(struct sd_markdown *rndr, int type)
 	rndr->work_bufs[type].size--;
 }
 
+static inline struct buf *
+rndr_newbufsm(struct sd_markdown *rndr, int type)
+{
+	struct buf *work = rndr_newbuf(rndr, type);
+	work->is_srcmap_enabled = 1;
+	if (work->srcmap == 0) {
+		work->srcmap = realloc(work->srcmap, work->asize * sizeof(size_t));
+		// Init unassigned bytes in the srcmap to -1 (which indicates
+		// that the byte cannot be mapped to the Markdown source)
+		for (size_t i = work->asize; i < work->asize; i++) {
+			work->srcmap[i] = (size_t) (-1);
+		}
+	}
+	return work;
+}
+
 static void
 unscape_text(struct buf *ob, struct buf *src)
 {
@@ -1674,8 +1690,7 @@ parse_blockquote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 	struct buf *work = 0;
 	struct buf *out = 0;
 
-	work = rndr_newbuf(rndr, BUFFER_BLOCK);
-	work->is_srcmap_enabled = 1;
+	work = rndr_newbufsm(rndr, BUFFER_BLOCK);
 	out = rndr_newbuf(rndr, BUFFER_BLOCK);
 	beg = 0;
 	while (beg < size) {
@@ -1950,8 +1965,7 @@ parse_listitem(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t s
 		end++;
 
 	/* getting working buffers */
-	work = rndr_newbuf(rndr, BUFFER_SPAN);
-	work->is_srcmap_enabled = 1;
+	work = rndr_newbufsm(rndr, BUFFER_SPAN);
 	inter = rndr_newbuf(rndr, BUFFER_SPAN);
 
 	/* putting the first line into the working buffer */
