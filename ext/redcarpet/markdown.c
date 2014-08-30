@@ -2737,7 +2737,8 @@ is_footnote(const uint8_t *data, size_t beg, size_t end, size_t *last, struct fo
 
 /* is_ref • returns whether a line is a reference or not */
 static int
-is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_ref **refs)
+is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_ref **refs,
+	   void *shl)
 {
 /*	int n; */
 	size_t i = 0;
@@ -2825,6 +2826,21 @@ is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_re
 
 	if (!line_end || link_end == link_offset)
 		return 0; /* garbage after the link empty link */
+
+	shlsetrange(shl, id_offset - 1, 1, SHL_REF_DEFINITION_REF_ENCLOSURE); // "["
+	shlsetrange(shl, id_offset, id_end - id_offset, SHL_REF_DEFINITION_REF);
+	shlsetrange(shl, id_end, 2, SHL_REF_DEFINITION_REF_ENCLOSURE); // "]:"
+	if (data[link_offset - 1] == '<')
+		shlsetrange(shl, link_offset - 1, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // "<"
+	shlsetrange(shl, link_offset, link_end - link_offset, SHL_REF_DEFINITION_URL);
+	if (data[link_end] == '>')
+		shlsetrange(shl, link_end, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // ">"
+	if (title_end > title_offset) {
+		shlsetrange(shl, title_offset - 1, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Opening " or ' or (
+		shlsetrange(shl, title_offset, title_end - title_offset, SHL_REF_DEFINITION_TITLE);
+		if (title_end < end && (data[title_end] == '\'' || data[title_end] == '"' || data[title_end] == ')'))
+			shlsetrange(shl, title_end, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Closing " or ' or )
+	}
 
 	/* a valid ref has been found, filling-in return structures */
 	if (last)
@@ -2994,7 +3010,7 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 	while (beg < doc_size) /* iterating over lines */
 		if (footnotes_enabled && is_footnote(document, beg, doc_size, &end, &md->footnotes_found))
 			beg = end;
-		else if (is_ref(document, beg, doc_size, &end, md->refs))
+		else if (is_ref(document, beg, doc_size, &end, md->refs, md->shl))
 			beg = end;
 		else { /* skipping to the next line */
 			end = beg;
