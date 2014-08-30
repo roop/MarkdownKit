@@ -1118,6 +1118,16 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 		fr = find_footnote_ref(&rndr->footnotes_found, id.data, id.size);
 
+		if (fr) {
+			shlset(rndr->shl, srcmap, 2, SHL_FOOTNOTE_REF_ENCLOSURE); // "[^"
+			shlset(rndr->shl, srcmap + 2, txt_e - 2, SHL_FOOTNOTE_REF);
+			shlset(rndr->shl, srcmap + txt_e, 1, SHL_FOOTNOTE_REF_ENCLOSURE); // "]"
+		} else {
+			shlset(rndr->shl, srcmap, 2, SHL_FOOTNOTE_UNRESOLVED_REF_ENCLOSURE); // "[^"
+			shlset(rndr->shl, srcmap + 2, txt_e - 2, SHL_FOOTNOTE_UNRESOLVED_REF);
+			shlset(rndr->shl, srcmap + txt_e, 1, SHL_FOOTNOTE_UNRESOLVED_REF_ENCLOSURE); // "]"
+		}
+
 		/* mark footnote used */
 		if (fr && !fr->is_used) {
 			if(!add_footnote_ref(&rndr->footnotes_used, fr))
@@ -2632,7 +2642,8 @@ parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 
 /* is_footnote • returns whether a line is a footnote definition or not */
 static int
-is_footnote(const uint8_t *data, size_t beg, size_t end, size_t *last, struct footnote_list *list)
+is_footnote(const uint8_t *data, size_t beg, size_t end, size_t *last, struct footnote_list *list,
+			void *shl)
 {
 	size_t i = 0;
 	struct buf *contents = 0;
@@ -2719,6 +2730,11 @@ is_footnote(const uint8_t *data, size_t beg, size_t end, size_t *last, struct fo
 
 	if (last)
 		*last = start;
+
+	shlsetrange(shl, id_offset - 2, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "[^"
+	shlsetrange(shl, id_offset, id_end - id_offset, SHL_FOOTNOTE_DEFINITION_REF);
+	shlsetrange(shl, id_end, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "]:"
+	shlsetrange(shl, id_end + 1, (*last) - id_end - 1, SHL_FOOTNOTE_DEFINITION_TEXT);
 
 	if (list) {
 		struct footnote_ref *ref;
@@ -3008,7 +3024,7 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 		beg += 3;
 
 	while (beg < doc_size) /* iterating over lines */
-		if (footnotes_enabled && is_footnote(document, beg, doc_size, &end, &md->footnotes_found))
+		if (footnotes_enabled && is_footnote(document, beg, doc_size, &end, &md->footnotes_found, md->shl))
 			beg = end;
 		else if (is_ref(document, beg, doc_size, &end, md->refs, md->shl))
 			beg = end;
