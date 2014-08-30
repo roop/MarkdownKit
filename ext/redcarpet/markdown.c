@@ -1223,9 +1223,9 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		if (title_e > title_b) {
 			title = rndr_newbuf(rndr, BUFFER_SPAN);
 			bufput(title, data + title_b, title_e - title_b);
-			shlset(rndr->shl, srcmap + title_b - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // " or '
+			shlset(rndr->shl, srcmap + title_b - 1, 1, SHL_LINK_OR_IMG_TITLE_QUOTES); // " or '
 			shlset(rndr->shl, srcmap + title_b, title_e - title_b, SHL_LINK_OR_IMG_TITLE);
-			shlset(rndr->shl, srcmap + title_e, 1, SHL_LINK_OR_IMG_SYNTAX); // " or '
+			shlset(rndr->shl, srcmap + title_e, 1, SHL_LINK_OR_IMG_TITLE_QUOTES); // " or '
 		}
 
 		i++;
@@ -1270,16 +1270,16 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		lr = find_link_ref(rndr->refs, id.data, id.size);
 		if (!lr) {
 			if (link_b < link_e) {
-				shlset(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // "["
+				shlset(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_UNRESOLVED_REF_ENCLOSURE); // "["
 				shlset(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_UNRESOLVED_REF);
-				shlset(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
+				shlset(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_UNRESOLVED_REF_ENCLOSURE); // "]"
 			}
 			goto cleanup;
 		}
 
-		shlset(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // "["
+		shlset(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "["
 		shlset(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_REF);
-		shlset(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
+		shlset(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "]"
 
 		/* keeping link and title from link_ref */
 		link = lr->link;
