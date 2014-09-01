@@ -486,7 +486,7 @@ parse_inline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t siz
 	uint8_t action = 0;
 	struct buf work = { 0, 0, 0, 0 };
 
-	shlset(rndr->shl, srcmap, size, SHL_TEXT_CONTENT);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, size, SHL_TEXT_CONTENT);
 
 	if (rndr->work_bufs[BUFFER_SPAN].size +
 		rndr->work_bufs[BUFFER_BLOCK].size > rndr->max_nesting)
@@ -642,15 +642,15 @@ parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			if (rndr->ext_flags & MKDEXT_UNDERLINE && c == '_') {
 				r = rndr->cb.underline(ob, work, rndr->opaque);
 				if (r)
-					shlset(rndr->shl, srcmap, i, SHL_UNDERLINE_CONTENT);
+					shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, i, SHL_UNDERLINE_CONTENT);
 			} else {
 				r = rndr->cb.emphasis(ob, work, rndr->opaque);
 				if (r)
-					shlset(rndr->shl, srcmap, i, SHL_EM_CONTENT);
+					shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, i, SHL_EM_CONTENT);
 			}
 
 			if (r)
-				shlset(rndr->shl, srcmap + i, 1, SHL_EMPHASIS_CHAR); // Closing "*"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, 1, SHL_EMPHASIS_CHAR); // Closing "*"
 
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			return r ? i + 1 : 0;
@@ -680,19 +680,19 @@ parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			if (c == '~') {
 				r = rndr->cb.strikethrough(ob, work, rndr->opaque);
 				if (r)
-					shlset(rndr->shl, srcmap, i, SHL_STRIKETHROUGH_CONTENT);
+					shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, i, SHL_STRIKETHROUGH_CONTENT);
 			} else if (c == '=') {
 				r = rndr->cb.highlight(ob, work, rndr->opaque);
 				if (r)
-					shlset(rndr->shl, srcmap, i, SHL_HIGHLIGHT_CONTENT);
+					shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, i, SHL_HIGHLIGHT_CONTENT);
 			} else {
 				r = rndr->cb.double_emphasis(ob, work, rndr->opaque);
 				if (r)
-					shlset(rndr->shl, srcmap, i, SHL_STRONG_CONTENT);
+					shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, i, SHL_STRONG_CONTENT);
 			}
 
 			if (r)
-				shlset(rndr->shl, srcmap + i, 2, SHL_EMPHASIS_CHAR); // Closing "**"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, 2, SHL_EMPHASIS_CHAR); // Closing "**"
 
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			return r ? i + 2 : 0;
@@ -728,9 +728,9 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			r = rndr->cb.triple_emphasis(ob, work, rndr->opaque);
 
 			if (r) {
-				shlset(rndr->shl, srcmap, i, SHL_EM_CONTENT);
-				shlset(rndr->shl, srcmap, i, SHL_STRONG_CONTENT);
-				shlset(rndr->shl, srcmap + i, 3, SHL_EMPHASIS_CHAR); // Closing "***"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, i, SHL_EM_CONTENT);
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, i, SHL_STRONG_CONTENT);
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, 3, SHL_EMPHASIS_CHAR); // Closing "***"
 			}
 
 			rndr_popbuf(rndr, BUFFER_SPAN);
@@ -740,7 +740,7 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			/* double symbol found, handing over to emph1 */
 			len = parse_emph1(ob, rndr, data - 2, size + 2, srcmap - 2, c);
 			if (len)
-				shlset(rndr->shl, srcmap - 3, 1, SHL_EMPHASIS_CHAR); // Opening "*"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap - 3, 1, SHL_EMPHASIS_CHAR); // Opening "*"
 			if (!len) return 0;
 			else return len - 2;
 
@@ -748,7 +748,7 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			/* single symbol found, handing over to emph2 */
 			len = parse_emph2(ob, rndr, data - 1, size + 1, srcmap - 1, c);
 			if (len)
-				shlset(rndr->shl, srcmap - 3, 2, SHL_EMPHASIS_CHAR); // Opening "**"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap - 3, 2, SHL_EMPHASIS_CHAR); // Opening "**"
 			if (!len) return 0;
 			else return len - 1;
 		}
@@ -774,7 +774,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 		if (c == '~' || c == '=' || _isspace(data[1]) || (ret = parse_emph1(ob, rndr, data + 1, size - 1, srcmap + 1, c)) == 0)
 			return 0;
 
-		shlset(rndr->shl, srcmap, 1, SHL_EMPHASIS_CHAR); // Opening "*"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_EMPHASIS_CHAR); // Opening "*"
 		return ret + 1;
 	}
 
@@ -782,7 +782,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 		if (_isspace(data[2]) || (ret = parse_emph2(ob, rndr, data + 2, size - 2, srcmap + 2, c)) == 0)
 			return 0;
 
-		shlset(rndr->shl, srcmap, 2, SHL_EMPHASIS_CHAR); // Opening "**"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 2, SHL_EMPHASIS_CHAR); // Opening "**"
 		return ret + 2;
 	}
 
@@ -790,7 +790,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 		if (c == '~' || c == '=' || _isspace(data[3]) || (ret = parse_emph3(ob, rndr, data + 3, size - 3, srcmap + 3, c)) == 0)
 			return 0;
 
-		shlset(rndr->shl, srcmap, 3, SHL_EMPHASIS_CHAR); // Opening "***"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 3, SHL_EMPHASIS_CHAR); // Opening "***"
 		return ret + 3;
 	}
 
@@ -834,8 +834,8 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	if (i < nb && end >= size)
 		return 0; /* no matching delimiter */
 
-	shlset(rndr->shl, srcmap, nb, SHL_CODE_SPAN_CHAR); // Opening backticks
-	shlset(rndr->shl, srcmap + end - nb, nb, SHL_CODE_SPAN_CHAR); // Closing backticks
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, nb, SHL_CODE_SPAN_CHAR); // Opening backticks
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + end - nb, nb, SHL_CODE_SPAN_CHAR); // Closing backticks
 
 	/* trimming outside whitespaces */
 	f_begin = nb;
@@ -849,7 +849,7 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	/* real code span */
 	if (f_begin < f_end) {
 		struct buf work = { data + f_begin, f_end - f_begin, 0, 0 };
-		shlset(rndr->shl, srcmap + f_begin, f_end - f_begin, SHL_CODE_SPAN_CONTENT);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + f_begin, f_end - f_begin, SHL_CODE_SPAN_CONTENT);
 		if (!rndr->cb.codespan(ob, &work, rndr->opaque))
 			end = 0;
 	} else {
@@ -976,9 +976,9 @@ char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 			unscape_text(u_link, &work);
 			ret = rndr->cb.autolink(ob, u_link, altype, rndr->opaque);
 			rndr_popbuf(rndr, BUFFER_SPAN);
-			shlset(rndr->shl, srcmap, 1, SHL_AUTOLINK_ANGLE_BRACKETS); // "<"
-			shlset(rndr->shl, srcmap + 1, end - 2, SHL_AUTOLINKED_URL);
-			shlset(rndr->shl, srcmap + end - 1, 1, SHL_AUTOLINK_ANGLE_BRACKETS); // ">"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_AUTOLINK_ANGLE_BRACKETS); // "<"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + 1, end - 2, SHL_AUTOLINKED_URL);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + end - 1, 1, SHL_AUTOLINK_ANGLE_BRACKETS); // ">"
 		}
 		else if (rndr->cb.raw_html_tag)
 			ret = rndr->cb.raw_html_tag(ob, &work, rndr->opaque);
@@ -1000,7 +1000,7 @@ char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 	link = rndr_newbuf(rndr, BUFFER_SPAN);
 
 	if ((link_len = sd_autolink__www(&rewind, link, data, offset, size, 0)) > 0) {
-		shlset(rndr->shl, srcmap, link_len, SHL_AUTOLINKED_URL);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, link_len, SHL_AUTOLINKED_URL);
 		link_url = rndr_newbuf(rndr, BUFFER_SPAN);
 		BUFPUTSL(link_url, "http://");
 		bufput(link_url, link->data, link->size);
@@ -1033,7 +1033,7 @@ char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, siz
 	link = rndr_newbuf(rndr, BUFFER_SPAN);
 
 	if ((link_len = sd_autolink__email(&rewind, link, data, offset, size, 0)) > 0) {
-		shlset(rndr->shl, srcmap - rewind, link_len + rewind, SHL_AUTOLINKED_URL);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap - rewind, link_len + rewind, SHL_AUTOLINKED_URL);
 		ob->size -= rewind;
 		rndr->cb.autolink(ob, link, MKDA_EMAIL, rndr->opaque);
 	}
@@ -1054,7 +1054,7 @@ char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 	link = rndr_newbuf(rndr, BUFFER_SPAN);
 
 	if ((link_len = sd_autolink__url(&rewind, link, data, offset, size, SD_AUTOLINK_SHORT_DOMAINS)) > 0) {
-		shlset(rndr->shl, srcmap - rewind, link_len + rewind, SHL_AUTOLINKED_URL);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap - rewind, link_len + rewind, SHL_AUTOLINKED_URL);
 		ob->size -= rewind;
 		rndr->cb.autolink(ob, link, MKDA_NORMAL, rndr->opaque);
 	}
@@ -1119,13 +1119,13 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		fr = find_footnote_ref(&rndr->footnotes_found, id.data, id.size);
 
 		if (fr) {
-			shlset(rndr->shl, srcmap, 2, SHL_FOOTNOTE_REF_ENCLOSURE); // "[^"
-			shlset(rndr->shl, srcmap + 2, txt_e - 2, SHL_FOOTNOTE_REF);
-			shlset(rndr->shl, srcmap + txt_e, 1, SHL_FOOTNOTE_REF_ENCLOSURE); // "]"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 2, SHL_FOOTNOTE_REF_ENCLOSURE); // "[^"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + 2, txt_e - 2, SHL_FOOTNOTE_REF);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + txt_e, 1, SHL_FOOTNOTE_REF_ENCLOSURE); // "]"
 		} else {
-			shlset(rndr->shl, srcmap, 2, SHL_FOOTNOTE_UNRESOLVED_REF_ENCLOSURE); // "[^"
-			shlset(rndr->shl, srcmap + 2, txt_e - 2, SHL_FOOTNOTE_UNRESOLVED_REF);
-			shlset(rndr->shl, srcmap + txt_e, 1, SHL_FOOTNOTE_UNRESOLVED_REF_ENCLOSURE); // "]"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 2, SHL_FOOTNOTE_UNRESOLVED_REF_ENCLOSURE); // "[^"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + 2, txt_e - 2, SHL_FOOTNOTE_UNRESOLVED_REF);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + txt_e, 1, SHL_FOOTNOTE_UNRESOLVED_REF_ENCLOSURE); // "]"
 		}
 
 		/* mark footnote used */
@@ -1206,8 +1206,8 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 			}
 		}
 
-		shlset(rndr->shl, srcmap + open_parens_pos, 1, SHL_LINK_OR_IMG_SYNTAX); // "("
-		shlset(rndr->shl, srcmap + i, 1, SHL_LINK_OR_IMG_SYNTAX); // ")"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + open_parens_pos, 1, SHL_LINK_OR_IMG_SYNTAX); // "("
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, 1, SHL_LINK_OR_IMG_SYNTAX); // ")"
 
 		/* remove whitespace at the end of the link */
 		while (link_e > link_b && _isspace(data[link_e - 1]))
@@ -1215,11 +1215,11 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 		/* remove optional angle brackets around the link */
 		if (data[link_b] == '<') {
-			shlset(rndr->shl, srcmap + link_b, 1, SHL_LINK_OR_IMG_SYNTAX); // <
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b, 1, SHL_LINK_OR_IMG_SYNTAX); // <
 			link_b++;
 		}
 		if (data[link_e - 1] == '>') {
-			shlset(rndr->shl, srcmap + link_e - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // >
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_e - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // >
 			link_e--;
 		}
 
@@ -1227,15 +1227,15 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		if (link_e > link_b) {
 			link = rndr_newbuf(rndr, BUFFER_SPAN);
 			bufput(link, data + link_b, link_e - link_b);
-			shlset(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_URL);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_URL);
 		}
 
 		if (title_e > title_b) {
 			title = rndr_newbuf(rndr, BUFFER_SPAN);
 			bufput(title, data + title_b, title_e - title_b);
-			shlset(rndr->shl, srcmap + title_b - 1, 1, SHL_LINK_OR_IMG_TITLE_QUOTES); // " or '
-			shlset(rndr->shl, srcmap + title_b, title_e - title_b, SHL_LINK_OR_IMG_TITLE);
-			shlset(rndr->shl, srcmap + title_e, 1, SHL_LINK_OR_IMG_TITLE_QUOTES); // " or '
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + title_b - 1, 1, SHL_LINK_OR_IMG_TITLE_QUOTES); // " or '
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + title_b, title_e - title_b, SHL_LINK_OR_IMG_TITLE);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + title_e, 1, SHL_LINK_OR_IMG_TITLE_QUOTES); // " or '
 		}
 
 		i++;
@@ -1280,16 +1280,16 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		lr = find_link_ref(rndr->refs, id.data, id.size);
 		if (!lr) {
 			if (link_b < link_e) {
-				shlset(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_UNRESOLVED_REF_ENCLOSURE); // "["
-				shlset(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_UNRESOLVED_REF);
-				shlset(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_UNRESOLVED_REF_ENCLOSURE); // "]"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_UNRESOLVED_REF_ENCLOSURE); // "["
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_UNRESOLVED_REF);
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_UNRESOLVED_REF_ENCLOSURE); // "]"
 			}
 			goto cleanup;
 		}
 
-		shlset(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "["
-		shlset(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_REF);
-		shlset(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "]"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "["
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_REF);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "]"
 
 		/* keeping link and title from link_ref */
 		link = lr->link;
@@ -1339,18 +1339,18 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		content = rndr_newbuf(rndr, BUFFER_SPAN);
 		if (is_img) {
 			bufput(content, data + 1, txt_e - 1);
-			shlset(rndr->shl, srcmap - 1, 2, SHL_LINK_OR_IMG_SYNTAX); // "!["
-			shlset(rndr->shl, srcmap + 1, txt_e - 1, SHL_IMG_ALT_TEXT);
-			shlset(rndr->shl, srcmap + txt_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap - 1, 2, SHL_LINK_OR_IMG_SYNTAX); // "!["
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + 1, txt_e - 1, SHL_IMG_ALT_TEXT);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + txt_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
 		} else {
 			/* disable autolinking when parsing inline the
 			 * content of a link */
 			rndr->in_link_body = 1;
 			parse_inline(content, rndr, data + 1, txt_e - 1, srcmap + 1);
 			rndr->in_link_body = 0;
-			shlset(rndr->shl, srcmap, 1, SHL_LINK_OR_IMG_SYNTAX); // "["
-			shlset(rndr->shl, srcmap + 1, txt_e - 1, SHL_LINKED_CONTENT);
-			shlset(rndr->shl, srcmap + txt_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_LINK_OR_IMG_SYNTAX); // "["
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + 1, txt_e - 1, SHL_LINKED_CONTENT);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + txt_e, 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
 		}
 	}
 
@@ -1406,10 +1406,10 @@ char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 		return (sup_start == 2) ? 3 : 0;
 
 	if (sup_start == 2) {
-		shlset(rndr->shl, srcmap, 2, SHL_SUPERSCRIPT_SYNTAX); // "^("
-		shlset(rndr->shl, srcmap + sup_len, 1, SHL_SUPERSCRIPT_SYNTAX); // ")"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 2, SHL_SUPERSCRIPT_SYNTAX); // "^("
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + sup_len, 1, SHL_SUPERSCRIPT_SYNTAX); // ")"
 	} else if (sup_start == 1) {
-		shlset(rndr->shl, srcmap, 1, SHL_SUPERSCRIPT_SYNTAX); // "^"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_SUPERSCRIPT_SYNTAX); // "^"
 	}
 
 	sup = rndr_newbuf(rndr, BUFFER_SPAN);
@@ -1709,7 +1709,7 @@ parse_blockquote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 		pre = prefix_quote(data + beg, end - beg);
 
 		if (pre) {
-			shlset(rndr->shl, srcmap + beg, pre, SHL_BLOCKQUOTE_LINE_PREFIX);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + beg, pre, SHL_BLOCKQUOTE_LINE_PREFIX);
 			beg += pre; /* skipping prefix */
 		}
 
@@ -1807,7 +1807,7 @@ parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 	} else {
 		struct buf *header_work;
 
-		shlset(rndr->shl, srcmap + i, end - i, SHL_SETEXT_HEADER_UNDERLINE);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, end - i, SHL_SETEXT_HEADER_UNDERLINE);
 
 		if (work.size) {
 			size_t beg;
@@ -1839,7 +1839,7 @@ parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 		header_work = rndr_newbuf(rndr, BUFFER_SPAN);
 		parse_inline(header_work, rndr, work.data, work.size, srcmap);
 
-		shlset(rndr->shl, srcmap, work.size, SHL_HEADER_CONTENT);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, work.size, SHL_HEADER_CONTENT);
 
 		if (rndr->cb.header)
 			rndr->cb.header(ob, header_work, (int)level, rndr->opaque);
@@ -1861,7 +1861,7 @@ parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 	beg = is_codefence(data, size, &lang);
 	if (beg == 0) return 0;
 
-	shlset(rndr->shl, srcmap, beg - 1, SHL_CODE_FENCE);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, beg - 1, SHL_CODE_FENCE);
 
 	size_t start_of_code = beg;
 	work = rndr_newbuf(rndr, BUFFER_BLOCK);
@@ -1874,7 +1874,7 @@ parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 
 		fence_end = is_codefence(data + beg, size - beg, &fence_trail);
 		if (fence_end != 0 && fence_trail.size == 0) {
-			shlset(rndr->shl, srcmap + beg, fence_end, SHL_CODE_FENCE);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + beg, fence_end, SHL_CODE_FENCE);
 			beg += fence_end;
 			break;
 		}
@@ -1892,7 +1892,7 @@ parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 		beg = end;
 	}
 
-	shlset(rndr->shl, srcmap + start_of_code, code_content_size, SHL_CODE_BLOCK_CONTENT);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + start_of_code, code_content_size, SHL_CODE_BLOCK_CONTENT);
 
 	if (work->size && work->data[work->size - 1] != '\n')
 		bufputc(work, '\n');
@@ -1933,7 +1933,7 @@ parse_blockcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 		beg = end;
 	}
 
-	shlset(rndr->shl, srcmap, beg, SHL_CODE_BLOCK_CONTENT);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, beg, SHL_CODE_BLOCK_CONTENT);
 
 	while (work->size && work->data[work->size - 1] == '\n')
 		work->size -= 1;
@@ -1967,7 +1967,7 @@ parse_listitem(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t s
 	if (!beg)
 		return 0;
 
-	shlset(rndr->shl, srcmap, beg, SHL_LIST_ITEM_PREFIX);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, beg, SHL_LIST_ITEM_PREFIX);
 
 	/* skipping to the beginning of the following line */
 	end = beg;
@@ -2118,7 +2118,7 @@ parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 	while (level < size && level < 6 && data[level] == '#')
 		level++;
 
-	shlset(rndr->shl, srcmap, level, SHL_ATX_HEADER_HASH);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, level, SHL_ATX_HEADER_HASH);
 
 	for (i = level; i < size && data[i] == ' '; i++);
 
@@ -2128,7 +2128,7 @@ parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 	while (end && data[end - 1] == '#')
 		end--;
 
-	shlset(rndr->shl, srcmap + end, skip - end, SHL_ATX_HEADER_HASH);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + end, skip - end, SHL_ATX_HEADER_HASH);
 
 	while (end && data[end - 1] == ' ')
 		end--;
@@ -2137,7 +2137,7 @@ parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 		struct buf *work = rndr_newbuf(rndr, BUFFER_SPAN);
 
 		parse_inline(work, rndr, data + i, end - i, srcmap + i);
-		shlset(rndr->shl, srcmap + i, end - i, SHL_HEADER_CONTENT);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, end - i, SHL_HEADER_CONTENT);
 
 		if (rndr->cb.header)
 			rndr->cb.header(ob, work, (int)level, rndr->opaque);
@@ -2366,7 +2366,7 @@ parse_table_row(
 	row_work = rndr_newbuf(rndr, BUFFER_SPAN);
 
 	if (i < size && data[i] == '|') {
-		shlset(rndr->shl, srcmap + i, 1, SHL_TABLE_BORDER);
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, 1, SHL_TABLE_BORDER);
 		i++;
 	}
 
@@ -2385,7 +2385,7 @@ parse_table_row(
 			i++;
 
 		if (i < size && data[i] == '|') {
-			shlset(rndr->shl, srcmap + i, 1, SHL_TABLE_BORDER);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, 1, SHL_TABLE_BORDER);
 			i++;
 		}
 
@@ -2397,7 +2397,7 @@ parse_table_row(
 		parse_inline(cell_work, rndr, data + cell_start, 1 + cell_end - cell_start, srcmap + cell_start);
 
 		if (header_flag == MKD_TABLE_HEADER)
-			shlset(rndr->shl, srcmap + cell_start, 1 + cell_end - cell_start, SHL_TABLER_HEADER_CELL_CONTENT);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + cell_start, 1 + cell_end - cell_start, SHL_TABLER_HEADER_CELL_CONTENT);
 
 		rndr->cb.table_cell(row_work, cell_work, col_data[col] | header_flag, rndr->opaque);
 
@@ -2495,7 +2495,7 @@ parse_table_header(
 	if (col < *columns)
 		return 0;
 
-	shlset(rndr->shl, srcmap + under_start, under_end - under_start, SHL_TABLE_BORDER);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + under_start, under_end - under_start, SHL_TABLE_BORDER);
 
 	parse_table_row(
 		ob, rndr, data,
@@ -2604,7 +2604,7 @@ parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			size_t hrstart = beg;
 			while (beg < size && data[beg] != '\n')
 				beg++;
-			shlset(rndr->shl, txt_srcmap, beg - hrstart, SHL_HORIZONTAL_RULE);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, txt_srcmap, beg - hrstart, SHL_HORIZONTAL_RULE);
 
 			beg++;
 		}
@@ -2731,10 +2731,10 @@ is_footnote(const uint8_t *data, size_t beg, size_t end, size_t *last, struct fo
 	if (last)
 		*last = start;
 
-	shlsetrange(shl, id_offset - 2, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "[^"
-	shlsetrange(shl, id_offset, id_end - id_offset, SHL_FOOTNOTE_DEFINITION_REF);
-	shlsetrange(shl, id_end, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "]:"
-	shlsetrange(shl, id_end + 1, (*last) - id_end - 1, SHL_FOOTNOTE_DEFINITION_TEXT);
+	shl_apply_syntax_formatting_with_range(shl, id_offset - 2, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "[^"
+	shl_apply_syntax_formatting_with_range(shl, id_offset, id_end - id_offset, SHL_FOOTNOTE_DEFINITION_REF);
+	shl_apply_syntax_formatting_with_range(shl, id_end, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "]:"
+	shl_apply_syntax_formatting_with_range(shl, id_end + 1, (*last) - id_end - 1, SHL_FOOTNOTE_DEFINITION_TEXT);
 
 	if (list) {
 		struct footnote_ref *ref;
@@ -2843,19 +2843,19 @@ is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_re
 	if (!line_end || link_end == link_offset)
 		return 0; /* garbage after the link empty link */
 
-	shlsetrange(shl, id_offset - 1, 1, SHL_REF_DEFINITION_REF_ENCLOSURE); // "["
-	shlsetrange(shl, id_offset, id_end - id_offset, SHL_REF_DEFINITION_REF);
-	shlsetrange(shl, id_end, 2, SHL_REF_DEFINITION_REF_ENCLOSURE); // "]:"
+	shl_apply_syntax_formatting_with_range(shl, id_offset - 1, 1, SHL_REF_DEFINITION_REF_ENCLOSURE); // "["
+	shl_apply_syntax_formatting_with_range(shl, id_offset, id_end - id_offset, SHL_REF_DEFINITION_REF);
+	shl_apply_syntax_formatting_with_range(shl, id_end, 2, SHL_REF_DEFINITION_REF_ENCLOSURE); // "]:"
 	if (data[link_offset - 1] == '<')
-		shlsetrange(shl, link_offset - 1, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // "<"
-	shlsetrange(shl, link_offset, link_end - link_offset, SHL_REF_DEFINITION_URL);
+		shl_apply_syntax_formatting_with_range(shl, link_offset - 1, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // "<"
+	shl_apply_syntax_formatting_with_range(shl, link_offset, link_end - link_offset, SHL_REF_DEFINITION_URL);
 	if (data[link_end] == '>')
-		shlsetrange(shl, link_end, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // ">"
+		shl_apply_syntax_formatting_with_range(shl, link_end, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // ">"
 	if (title_end > title_offset) {
-		shlsetrange(shl, title_offset - 1, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Opening " or ' or (
-		shlsetrange(shl, title_offset, title_end - title_offset, SHL_REF_DEFINITION_TITLE);
+		shl_apply_syntax_formatting_with_range(shl, title_offset - 1, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Opening " or ' or (
+		shl_apply_syntax_formatting_with_range(shl, title_offset, title_end - title_offset, SHL_REF_DEFINITION_TITLE);
 		if (title_end < end && (data[title_end] == '\'' || data[title_end] == '"' || data[title_end] == ')'))
-			shlsetrange(shl, title_end, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Closing " or ' or )
+			shl_apply_syntax_formatting_with_range(shl, title_end, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Closing " or ' or )
 	}
 
 	/* a valid ref has been found, filling-in return structures */
