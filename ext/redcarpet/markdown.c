@@ -852,7 +852,7 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	/* real code span */
 	if (f_begin < f_end) {
 		struct buf work = { data + f_begin, f_end - f_begin, 0, 0 };
-		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + f_begin, f_end - f_begin, SHL_CODE_SPAN_CONTENT);
+		shl_apply_text_formatting_with_srcmap(rndr->shl, srcmap + f_begin, f_end - f_begin, SHL_CODE_SPAN_CONTENT);
 		if (!rndr->cb.codespan(ob, &work, rndr->opaque))
 			end = 0;
 	} else {
@@ -1139,10 +1139,6 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 2, SHL_FOOTNOTE_REF_ENCLOSURE); // "[^"
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + 2, txt_e - 2, SHL_FOOTNOTE_REF);
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + txt_e, 1, SHL_FOOTNOTE_REF_ENCLOSURE); // "]"
-		} else {
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 2, SHL_FOOTNOTE_UNRESOLVED_REF_ENCLOSURE); // "[^"
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + 2, txt_e - 2, SHL_FOOTNOTE_UNRESOLVED_REF);
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + txt_e, 1, SHL_FOOTNOTE_UNRESOLVED_REF_ENCLOSURE); // "]"
 		}
 
 		/* mark footnote used */
@@ -1295,14 +1291,8 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		}
 
 		lr = find_link_ref(rndr->refs, id.data, id.size);
-		if (!lr) {
-			if (link_b < link_e) {
-				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_UNRESOLVED_REF_ENCLOSURE); // "["
-				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_UNRESOLVED_REF);
-				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_e, 1, SHL_LINK_OR_IMG_UNRESOLVED_REF_ENCLOSURE); // "]"
-			}
+		if (!lr)
 			goto cleanup;
-		}
 
 		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b - 1, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "["
 		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + link_b, link_e - link_b, SHL_LINK_OR_IMG_REF);
@@ -2408,7 +2398,7 @@ parse_table_row(
 			cell_end--;
 
 		parse_inline(cell_work, rndr, data + cell_start, 1 + cell_end - cell_start, srcmap + cell_start,
-					 ((header_flag == MKD_TABLE_HEADER)? SHL_TABLER_HEADER_CELL_CONTENT : SHL_TEXT_CONTENT));
+					 ((header_flag == MKD_TABLE_HEADER)? SHL_TABLE_HEADER_CELL_CONTENT : SHL_TEXT_CONTENT));
 
 		rndr->cb.table_cell(row_work, cell_work, col_data[col] | header_flag, rndr->opaque);
 
@@ -2860,7 +2850,7 @@ is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_re
 	if (data[link_offset - 1] == '<')
 		shl_apply_syntax_formatting_with_range(shl, link_offset - 1, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // "<"
 	shl_apply_syntax_formatting_with_range(shl, link_offset, link_end - link_offset, SHL_REF_DEFINITION_URL);
-	if (data[link_end] == '>')
+	if (link_end < end && data[link_end] == '>')
 		shl_apply_syntax_formatting_with_range(shl, link_end, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // ">"
 	if (title_end > title_offset) {
 		shl_apply_syntax_formatting_with_range(shl, title_offset - 1, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Opening " or ' or (
