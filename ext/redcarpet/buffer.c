@@ -18,6 +18,7 @@
 #define BUFFER_MAX_ALLOC_SIZE (1024 * 1024 * 16) //16mb
 
 #include "buffer.h"
+#include "ast.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,6 +104,7 @@ bufnew(size_t unit)
 		ret->unit = unit;
 		ret->is_srcmap_enabled = 0;
 		ret->srcmap = 0;
+		ret->ast = 0;
 	}
 	return ret;
 }
@@ -118,7 +120,6 @@ bufnewsm(size_t unit)
 	}
 	return ret;
 }
-
 
 /* bufnullterm: NULL-termination of the string array */
 const char *
@@ -246,4 +247,60 @@ void bufdebugsm(struct buf *buf)
 		printf("%2d ", (int) buf->srcmap[i]);
 	}
 	printf("\n");
+}
+
+void buf_append_ast_node(struct buf *buf, struct ast_node *node)
+{
+	if (buf->ast == 0) {
+		buf->ast = node;
+	} else {
+		ast_last_node(buf->ast)->next = node;
+	}
+}
+
+static void print_in_one_line(const char *str, size_t len)
+{
+	if (len == 0) {
+		return;
+	}
+	int is_ellipsis_printed = 0;
+	for (int i = 0; i < len; i++) {
+		if (i < 10 || (len - i) < 10) {
+			char c = str[i];
+			if (c == '\n') {
+				printf("\\n");
+			} else {
+				printf("%c", str[i]);
+			}
+		} else if (!is_ellipsis_printed) {
+			printf(" ... ");
+			is_ellipsis_printed = 1;
+		}
+	}
+}
+
+// #define USE_CONTENT_OFFSET
+
+void ast_print(struct ast_node *ast_node, struct buf *buf, int depth, size_t offset)
+{
+	if (ast_node == 0 || buf == 0) {
+		return;
+	}
+	printf("%*s tag: [%s] contents: \"", depth * 2, "", ast_node->html_tag_name);
+#ifdef USE_CONTENT_OFFSET
+	size_t ast_offset = ast_node->content_offset;
+	size_t ast_length = ast_node->content_length;
+#else
+	size_t ast_offset = ast_node->elem_offset;
+	size_t ast_length = ast_node->content_offset + ast_node->content_length + ast_node->close_tag_length - ast_offset;
+#endif
+	print_in_one_line((const char *) buf->data + offset + ast_offset, ast_length);
+	printf("\"\n");
+	ast_print(ast_node->children, buf, depth + 1, offset + ast_node->content_offset);
+	ast_print(ast_node->next, buf, depth, offset);
+}
+
+void bufdebugast(struct buf *buf)
+{
+	ast_print(buf->ast, buf, 0, 0);
 }
