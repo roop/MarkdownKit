@@ -2389,7 +2389,6 @@ parse_table_row(
 
 		if (i < size && data[i] == '|') {
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, 1, SHL_TABLE_BORDER);
-			i++;
 		}
 
 		cell_end = i - 1;
