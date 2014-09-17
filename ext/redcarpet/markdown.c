@@ -486,7 +486,7 @@ parse_inline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t siz
 {
 	size_t i = 0, end = 0;
 	uint8_t action = 0;
-	struct buf work = { 0, 0, 0, 0 };
+	struct buf work = { 0, 0, 0, 0, 0, 0, 0 };
 
 	if (rndr->work_bufs[BUFFER_SPAN].size +
 		rndr->work_bufs[BUFFER_BLOCK].size > rndr->max_nesting)
@@ -919,7 +919,7 @@ char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offs
 	(void) txtfmt; // Unused
 
 	static const char *escape_chars = "\\`*_{}[]()#+-.!:|&<>^~";
-	struct buf work = { 0, 0, 0, 0 };
+	struct buf work = { 0, 0, 0, 0, 0, 0, 0 };
 
 	if (size > 1) {
 		if (strchr(escape_chars, data[1]) == NULL)
@@ -947,7 +947,7 @@ char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offs
 	(void) txtfmt; // Unused
 
 	size_t end = 1;
-	struct buf work = { 0, 0, 0, 0 };
+	struct buf work = { 0, 0, 0, 0, 0, 0, 0 };
 
 	if (end < size && data[end] == '#')
 		end++;
@@ -1129,7 +1129,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		if (txt_e < 3)
 			goto cleanup;
 
-		struct buf id = { 0, 0, 0, 0 };
+		struct buf id = { 0, 0, 0, 0, 0, 0, 0 };
 		struct footnote_ref *fr;
 
 		id.data = data + 2;
@@ -1258,7 +1258,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 	/* reference style link */
 	else if (i < size && data[i] == '[') {
-		struct buf id = { 0, 0, 0, 0 };
+		struct buf id = { 0, 0, 0, 0, 0, 0, 0 };
 		struct link_ref *lr;
 
 		/* looking for the id */
@@ -1308,7 +1308,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 	/* shortcut reference style link */
 	else {
-		struct buf id = { 0, 0, 0, 0 };
+		struct buf id = { 0, 0, 0, 0, 0, 0, 0 };
 		struct link_ref *lr;
 
 		/* crafting the id */
@@ -1862,7 +1862,7 @@ parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 {
 	size_t beg, end;
 	struct buf *work = 0;
-	struct buf lang = { 0, 0, 0, 0 };
+	struct buf lang = { 0, 0, 0, 0, 0, 0, 0 };
 
 	beg = is_codefence(data, size, &lang);
 	if (beg == 0) return 0;
@@ -1876,7 +1876,7 @@ parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 
 	while (beg < size) {
 		size_t fence_end;
-		struct buf fence_trail = { 0, 0, 0, 0 };
+		struct buf fence_trail = { 0, 0, 0, 0, 0, 0, 0 };
 
 		fence_end = is_codefence(data + beg, size - beg, &fence_trail);
 		if (fence_end != 0 && fence_trail.size == 0) {
@@ -2408,7 +2408,7 @@ parse_table_row(
 	}
 
 	for (; col < columns; ++col) {
-		struct buf empty_cell = { 0, 0, 0, 0 };
+		struct buf empty_cell = { 0, 0, 0, 0, 0, 0, 0 };
 		rndr->cb.table_cell(row_work, &empty_cell, col_data[col] | header_flag, rndr->opaque);
 	}
 
