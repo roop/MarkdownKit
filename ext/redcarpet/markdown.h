@@ -97,11 +97,14 @@ struct sd_callbacks {
 
 	/* low level callbacks - NULL copies input directly into the output */
 	void (*entity)(struct buf *ob, const struct buf *entity, void *opaque);
-	void (*normal_text)(struct buf *ob, const struct buf *text, void *opaque);
+	void (*normal_text)(struct buf *ob, const struct buf *text, void *opaque, size_t *srcmap);
 
 	/* header and footer */
 	void (*doc_header)(struct buf *ob, void *opaque);
 	void (*doc_footer)(struct buf *ob, void *opaque);
+
+	/* Editor cursor position marker */
+	void (*cursor_marker)(struct buf *ob, void *opaque, size_t *srcmap, size_t len, size_t effective_cursor_pos_index);
 };
 
 /* header methods used internally in Redcarpet */

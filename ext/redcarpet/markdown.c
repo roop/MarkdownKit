@@ -503,7 +503,7 @@ parse_inline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t siz
 		if (rndr->cb.normal_text) {
 			work.data = data + i;
 			work.size = end - i;
-			rndr->cb.normal_text(ob, &work, rndr->opaque);
+			rndr->cb.normal_text(ob, &work, rndr->opaque, srcmap + i);
 		}
 		else
 			bufput(ob, data + i, end - i);
@@ -928,7 +928,7 @@ char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offs
 		if (rndr->cb.normal_text) {
 			work.data = data + 1;
 			work.size = 1;
-			rndr->cb.normal_text(ob, &work, rndr->opaque);
+			rndr->cb.normal_text(ob, &work, rndr->opaque, srcmap + 1);
 		}
 		else bufputc(ob, data[1]);
 	} else if (size == 1) {
@@ -1023,7 +1023,7 @@ char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 		ob->size -= rewind;
 		if (rndr->cb.normal_text) {
 			link_text = rndr_newbuf(rndr, BUFFER_SPAN);
-			rndr->cb.normal_text(link_text, link, rndr->opaque);
+			rndr->cb.normal_text(link_text, link, rndr->opaque, srcmap);
 			rndr->cb.link(ob, link_url, NULL, link_text, rndr->opaque);
 			rndr_popbuf(rndr, BUFFER_SPAN);
 		} else {
@@ -1087,7 +1087,7 @@ static size_t
 char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	int is_img = (offset && data[-1] == '!'), level;
-	size_t i = 1, txt_e, link_b = 0, link_e = 0, title_b = 0, title_e = 0;
+	size_t i = 1, txt_e = 0, link_b = 0, link_e = 0, title_b = 0, title_e = 0;
 	struct buf *content = 0;
 	struct buf *link = 0;
 	struct buf *title = 0;
@@ -1379,6 +1379,10 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 	/* cleanup */
 cleanup:
+	if (ret) {
+		rndr->cb.cursor_marker(ob, rndr->opaque, srcmap, i, txt_e);
+	}
+
 	rndr->work_bufs[BUFFER_SPAN].size = (int)org_work_size;
 	return ret ? i : 0;
 }

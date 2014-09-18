@@ -75,6 +75,40 @@ static inline void escape_href(struct buf *ob, const uint8_t *source, size_t len
 /********************
  * GENERIC RENDERER *
  ********************/
+
+static int index_of_cursor(void *opaque, size_t *srcmap, size_t len, size_t *effective_cursor_pos_index)
+{
+	struct html_renderopt *render_options = opaque;
+	int is_cursor_inserted = render_options->is_cursor_marker_inserted;
+	size_t cursor_pos = render_options->cursor_pos;
+	if (!is_cursor_inserted) {
+		if ((srcmap[0] <= cursor_pos) && (srcmap[len - 1] >= cursor_pos)) {
+			for (int i = 0; i < len; i++) {
+				if (srcmap[i] >= cursor_pos) {
+					(*effective_cursor_pos_index) = i;
+					return i;
+				}
+			}
+		} else if (srcmap[len - 1] + 1 == cursor_pos) {
+			(*effective_cursor_pos_index) = len - 1;
+			return (int) len;
+		}
+	}
+	return -1;
+}
+
+static void
+rndr_cursor_marker(struct buf *ob, void *opaque, size_t *srcmap, size_t len, size_t effective_cursor_pos_index)
+{
+	struct html_renderopt *render_options = opaque;
+	if ((render_options->is_cursor_marker_inserted == 0) &&
+		(srcmap[0] <= render_options->cursor_pos) && (srcmap[len - 1] + 1 >= render_options->cursor_pos)) {
+		BUFPUTSL(ob, "<span id=\"__cursor_marker__\">|</span>");
+		render_options->is_cursor_marker_inserted = 1;
+		render_options->effective_cursor_pos = srcmap[effective_cursor_pos_index];
+	}
+}
+
 static int
 rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque)
 {
@@ -679,10 +713,22 @@ rndr_superscript(struct buf *ob, const struct buf *text, void *opaque)
 }
 
 static void
-rndr_normal_text(struct buf *ob, const struct buf *text, void *opaque)
+rndr_normal_text(struct buf *ob, const struct buf *text, void *opaque, size_t *srcmap)
 {
-	if (text)
-		escape_html(ob, text->data, text->size);
+	if (text) {
+		size_t effective_cursor_pos_index = 0;
+		int ci = index_of_cursor(opaque, srcmap, text->size, &effective_cursor_pos_index);
+		if (ci >= 0) { // Cursor is contained in this text
+			assert(ci <= text->size);
+			if (ci > 0)
+				escape_html(ob, text->data, ci);
+			rndr_cursor_marker(ob, opaque, srcmap, text->size, effective_cursor_pos_index);
+			if (text->size > ci)
+				escape_html(ob, text->data + ci, text->size - ci);
+		} else { // Cursor is NOT contained in this text
+			escape_html(ob, text->data, text->size);
+		}
+	}
 }
 
 static void
@@ -832,6 +878,8 @@ sdhtml_toc_renderer(struct sd_callbacks *callbacks, struct html_renderopt *optio
 
 		NULL,
 		toc_finalize,
+
+		NULL,
 	};
 
 	memset(options, 0x0, sizeof(struct html_renderopt));
@@ -880,6 +928,8 @@ sdhtml_renderer(struct sd_callbacks *callbacks, struct html_renderopt *options, 
 
 		NULL,
 		NULL,
+
+		rndr_cursor_marker,
 	};
 
 	/* Prepare the options pointer */
