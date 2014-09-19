@@ -855,10 +855,10 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	if (f_begin < f_end) {
 		struct buf work = { data + f_begin, f_end - f_begin, 0, 0 };
 		shl_apply_text_formatting_with_srcmap(rndr->shl, srcmap + f_begin, f_end - f_begin, SHL_CODE_SPAN_CONTENT);
-		if (!rndr->cb.codespan(ob, &work, rndr->opaque))
+		if (!rndr->cb.codespan(ob, &work, rndr->opaque, srcmap + f_begin))
 			end = 0;
 	} else {
-		if (!rndr->cb.codespan(ob, 0, rndr->opaque))
+		if (!rndr->cb.codespan(ob, 0, rndr->opaque, srcmap))
 			end = 0;
 	}
 

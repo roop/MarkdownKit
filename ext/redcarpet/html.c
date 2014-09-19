@@ -220,7 +220,7 @@ rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque)
 }
 
 static int
-rndr_codespan(struct buf *ob, const struct buf *text, void *opaque)
+rndr_codespan(struct buf *ob, const struct buf *text, void *opaque, size_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
 	struct ast_node *ast_node = ast_new_node("code", ob->size, (text? text->ast : 0));
@@ -229,7 +229,22 @@ rndr_codespan(struct buf *ob, const struct buf *text, void *opaque)
 	else
 		BUFPUTSL(ob, "<code>");
 	ast_node->content_offset = ob->size;
-	if (text) escape_html(ob, text->data, text->size);
+
+	if (text) {
+		size_t effective_cursor_pos_index = 0;
+		int ci = index_of_cursor(opaque, srcmap, text->size, &effective_cursor_pos_index);
+		if (ci >= 0) { // Cursor is contained in this text
+			assert(ci <= text->size);
+			if (ci > 0)
+				escape_html(ob, text->data, ci);
+			rndr_cursor_marker(ob, opaque, srcmap, text->size, effective_cursor_pos_index);
+			if (text->size > ci)
+				escape_html(ob, text->data + ci, text->size - ci);
+		} else { // Cursor is NOT contained in this text
+			escape_html(ob, text->data, text->size);
+		}
+	}
+
 	ast_node->content_length = ob->size - ast_node->content_offset;
 	ast_node->close_tag_length = 7;
 	buf_append_ast_node(ob, ast_node);
