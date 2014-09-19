@@ -110,7 +110,7 @@ rndr_cursor_marker(struct buf *ob, void *opaque, size_t *srcmap, size_t len, siz
 }
 
 static int
-rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque)
+rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque, size_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
 
@@ -147,6 +147,8 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 	}
 
 	BUFPUTSL(ob, "</a>");
+
+	rndr_cursor_marker(ob, opaque, srcmap, link->size, link->size - 1);
 
 	return 1;
 }

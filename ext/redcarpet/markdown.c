@@ -987,7 +987,7 @@ char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 			work.data = data + 1;
 			work.size = end - 2;
 			unscape_text(u_link, &work);
-			ret = rndr->cb.autolink(ob, u_link, altype, rndr->opaque);
+			ret = rndr->cb.autolink(ob, u_link, altype, rndr->opaque, srcmap + 1);
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_AUTOLINK_ANGLE_BRACKETS); // "<"
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + 1, end - 2, SHL_AUTOLINKED_URL);
@@ -1052,7 +1052,7 @@ char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, siz
 	if ((link_len = sd_autolink__email(&rewind, link, data, offset, size, 0)) > 0) {
 		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap - rewind, link_len + rewind, SHL_AUTOLINKED_URL);
 		ob->size -= rewind;
-		rndr->cb.autolink(ob, link, MKDA_EMAIL, rndr->opaque);
+		rndr->cb.autolink(ob, link, MKDA_EMAIL, rndr->opaque, srcmap - rewind);
 	}
 
 	rndr_popbuf(rndr, BUFFER_SPAN);
@@ -1075,7 +1075,7 @@ char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 	if ((link_len = sd_autolink__url(&rewind, link, data, offset, size, SD_AUTOLINK_SHORT_DOMAINS)) > 0) {
 		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap - rewind, link_len + rewind, SHL_AUTOLINKED_URL);
 		ob->size -= rewind;
-		rndr->cb.autolink(ob, link, MKDA_NORMAL, rndr->opaque);
+		rndr->cb.autolink(ob, link, MKDA_NORMAL, rndr->opaque, srcmap - rewind);
 	}
 
 	rndr_popbuf(rndr, BUFFER_SPAN);

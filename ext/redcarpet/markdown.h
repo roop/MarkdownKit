@@ -79,7 +79,7 @@ struct sd_callbacks {
 	void (*footnote_def)(struct buf *ob, const struct buf *text, unsigned int num, void *opaque);
 
 	/* span level callbacks - NULL or return 0 prints the span verbatim */
-	int (*autolink)(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque);
+	int (*autolink)(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque, size_t *srcmap);
 	int (*codespan)(struct buf *ob, const struct buf *text, void *opaque);
 	int (*double_emphasis)(struct buf *ob, const struct buf *text, void *opaque);
 	int (*emphasis)(struct buf *ob, const struct buf *text, void *opaque);
