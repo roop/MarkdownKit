@@ -81,7 +81,7 @@ static int index_of_cursor(void *opaque, size_t *srcmap, size_t len, size_t *eff
 	struct html_renderopt *render_options = opaque;
 	int is_cursor_inserted = render_options->is_cursor_marker_inserted;
 	size_t cursor_pos = render_options->cursor_pos;
-	if (!is_cursor_inserted) {
+	if (srcmap && !is_cursor_inserted) {
 		if ((srcmap[0] <= cursor_pos) && (srcmap[len - 1] >= cursor_pos)) {
 			for (int i = 0; i < len; i++) {
 				if (srcmap[i] >= cursor_pos) {
@@ -154,7 +154,7 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 }
 
 static void
-rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque)
+rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque, size_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
 
@@ -195,8 +195,20 @@ rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, v
 		BUFPUTSL(ob, "<pre><code>");
 	}
 
-	if (text)
-		escape_html(ob, text->data, text->size);
+	if (text) {
+		size_t effective_cursor_pos_index = 0;
+		int ci = index_of_cursor(opaque, srcmap, text->size, &effective_cursor_pos_index);
+		if (ci >= 0) { // Cursor is contained in this text
+			assert(ci <= text->size);
+			if (ci > 0)
+				escape_html(ob, text->data, ci);
+			rndr_cursor_marker(ob, opaque, srcmap, text->size, effective_cursor_pos_index);
+			if (text->size > ci)
+				escape_html(ob, text->data + ci, text->size - ci);
+		} else { // Cursor is NOT contained in this text
+			escape_html(ob, text->data, text->size);
+		}
+	}
 
 	BUFPUTSL(ob, "</code></pre>\n");
 

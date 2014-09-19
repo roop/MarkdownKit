@@ -822,7 +822,6 @@ static size_t
 char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) txtfmt; // unused
-
 	size_t end, nb = 0, i, f_begin, f_end;
 
 	/* counting the number of backticks in the delimiter */
@@ -1894,10 +1893,12 @@ parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 		if (beg < end) {
 			/* verbatim copy to the working buffer,
 				escaping entities */
-			if (is_empty(data + beg, end - beg))
+			if (is_empty(data + beg, end - beg)) {
 				bufputc(work, '\n');
-			else bufput(work, data + beg, end - beg);
-			code_content_size += (end - beg);
+			} else {
+				bufput(work, data + beg, end - beg);
+				code_content_size += (end - beg);
+			}
 		}
 		beg = end;
 	}
@@ -1908,7 +1909,7 @@ parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 		bufputc(work, '\n');
 
 	if (rndr->cb.blockcode)
-		rndr->cb.blockcode(ob, work, lang.size ? &lang : NULL, rndr->opaque);
+		rndr->cb.blockcode(ob, work, lang.size ? &lang : NULL, rndr->opaque, code_content_size? srcmap + start_of_code : 0);
 
 	rndr_popbuf(rndr, BUFFER_BLOCK);
 	return beg;
@@ -1920,7 +1921,7 @@ parse_blockcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 	size_t beg, end, pre;
 	struct buf *work = 0;
 
-	work = rndr_newbuf(rndr, BUFFER_BLOCK);
+	work = rndr_newbufsm(rndr, BUFFER_BLOCK);
 
 	beg = 0;
 	while (beg < size) {
@@ -1938,12 +1939,12 @@ parse_blockcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 				escaping entities */
 			if (is_empty(data + beg, end - beg))
 				bufputc(work, '\n');
-			else bufput(work, data + beg, end - beg);
+			else bufputsm(work, data, srcmap, beg, end - beg);
 		}
 		beg = end;
 	}
 
-	shl_apply_text_formatting_with_srcmap(rndr->shl, srcmap, beg, SHL_CODE_BLOCK_CONTENT);
+	shl_apply_text_formatting_with_srcmap(rndr->shl, work->srcmap, work->size, SHL_CODE_BLOCK_CONTENT);
 
 	while (work->size && work->data[work->size - 1] == '\n')
 		work->size -= 1;
@@ -1951,7 +1952,7 @@ parse_blockcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 	bufputc(work, '\n');
 
 	if (rndr->cb.blockcode)
-		rndr->cb.blockcode(ob, work, NULL, rndr->opaque);
+		rndr->cb.blockcode(ob, work, NULL, rndr->opaque, work->srcmap);
 
 	rndr_popbuf(rndr, BUFFER_BLOCK);
 	return beg;
