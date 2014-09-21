@@ -39,6 +39,9 @@ typedef enum {
 /* struct ast_node: Abstract Syntax Tree node */
 struct ast_node;
 
+/* Type for byte-index into the original markdown source */
+typedef int32_t srcmap_t;
+
 /* struct buf: character array buffer */
 struct buf {
 	uint8_t *data;		/* actual character data */
@@ -46,7 +49,7 @@ struct buf {
 	size_t asize;	/* allocated size (0 = volatile buffer) */
 	size_t unit;	/* reallocation unit size (0 = read-only buffer) */
 	/* Extended by roop */
-	size_t *srcmap; /* byte-indices into the original markdown source */
+	srcmap_t *srcmap; /* byte-indices into the original markdown source */
 	int is_srcmap_enabled;
     struct ast_node *ast;
 };
@@ -70,7 +73,7 @@ int bufprefix(const struct buf *buf, const char *prefix);
 
 /* bufput: appends raw data to a buffer */
 void bufput(struct buf *, const void *, size_t);
-void bufputsm(struct buf *, const void *data, const size_t *srcmap, size_t offset, size_t len);
+void bufputsm(struct buf *, const void *data, const srcmap_t *srcmap, size_t offset, size_t len);
 
 /* bufputs: appends a NUL-terminated string to a buffer */
 void bufputs(struct buf *, const char *);

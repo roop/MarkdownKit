@@ -87,22 +87,22 @@ struct footnote_list {
 /*   offset is the number of valid chars before data */
 struct sd_markdown;
 typedef size_t
-(*char_trigger)(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
+(*char_trigger)(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
 
-static size_t char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
 static size_t char_underline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
 static size_t char_highlight(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
+static size_t char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
 
 enum markdown_char_t {
 	MD_CHAR_NONE = 0,
@@ -194,7 +194,7 @@ rndr_newbufsm(struct sd_markdown *rndr, int type)
 		// Init unassigned bytes in the srcmap to -1 (which indicates
 		// that the byte cannot be mapped to the Markdown source)
 		for (size_t i = work->asize; i < work->asize; i++) {
-			work->srcmap[i] = (size_t) (-1);
+			work->srcmap[i] = -1;
 		}
 	}
 	return work;
@@ -482,7 +482,7 @@ tag_length(uint8_t *data, size_t size, enum mkd_autolink *autolink)
 
 /* parse_inline • parses inline markdown elements */
 static void
-parse_inline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+parse_inline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	size_t i = 0, end = 0;
 	uint8_t action = 0;
@@ -616,7 +616,7 @@ find_emph_char(uint8_t *data, size_t size, uint8_t c)
 /* parse_emph1 • parsing single emphase */
 /* closed by a symbol not preceded by whitespace and not followed by symbol */
 static size_t
-parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, uint8_t c, shl_text_formatting_t txtfmt)
+parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap, uint8_t c, shl_text_formatting_t txtfmt)
 {
 	size_t i = 0, len;
 	struct buf *work = 0;
@@ -665,7 +665,7 @@ parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 
 /* parse_emph2 • parsing single emphase */
 static size_t
-parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, uint8_t c, shl_text_formatting_t txtfmt)
+parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap, uint8_t c, shl_text_formatting_t txtfmt)
 {
 	size_t i = 0, len;
 	struct buf *work = 0;
@@ -710,7 +710,7 @@ parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 /* parse_emph3 • parsing single emphase */
 /* finds the first closing tag, and delegates to the other emph */
 static size_t
-parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, uint8_t c, shl_text_formatting_t txtfmt)
+parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap, uint8_t c, shl_text_formatting_t txtfmt)
 {
 	size_t i = 0, len;
 	int r;
@@ -760,7 +760,7 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 
 /* char_emphasis • single and double emphasis parsing */
 static size_t
-char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	uint8_t c = data[0];
 	size_t ret;
@@ -802,7 +802,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 
 /* char_linebreak • '\n' preceded by two spaces (assuming linebreak != 0) */
 static size_t
-char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) srcmap; // unused
 	(void) txtfmt; // unused
@@ -819,7 +819,7 @@ char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t o
 
 /* char_codespan • '`' parsing a code span (assuming codespan != 0) */
 static size_t
-char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) txtfmt; // unused
 	size_t end, nb = 0, i, f_begin, f_end;
@@ -866,7 +866,7 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 
 /* char_quote • '"' parsing a quote */
 static size_t
-char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) srcmap; // Unused
 	(void) txtfmt; // Unused
@@ -912,7 +912,7 @@ char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offse
 
 /* char_escape • '\\' backslash escape */
 static size_t
-char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) srcmap; // Unused
 	(void) txtfmt; // Unused
@@ -940,7 +940,7 @@ char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offs
 /* char_entity • '&' escaped when it doesn't belong to an entity */
 /* valid entities are assumed to be anything matching &#?[A-Za-z0-9]+; */
 static size_t
-char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) srcmap; // Unused
 	(void) txtfmt; // Unused
@@ -971,7 +971,7 @@ char_entity(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offs
 
 /* char_langle_tag • '<' when tags or autolinks are allowed */
 static size_t
-char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) txtfmt; // Unused
 
@@ -1001,7 +1001,7 @@ char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 }
 
 static size_t
-char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) txtfmt; // Unused
 
@@ -1036,7 +1036,7 @@ char_autolink_www(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 }
 
 static size_t
-char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) txtfmt; // Unused
 
@@ -1059,7 +1059,7 @@ char_autolink_email(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, siz
 }
 
 static size_t
-char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	(void) txtfmt; // Unused
 
@@ -1083,7 +1083,7 @@ char_autolink_url(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_
 
 /* char_link • '[': parsing a link or an image */
 static size_t
-char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	int is_img = (offset && data[-1] == '!'), level;
 	size_t i = 1, txt_e = 0, link_b = 0, link_e = 0, title_b = 0, title_e = 0;
@@ -1387,7 +1387,7 @@ cleanup:
 }
 
 static size_t
-char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, size_t *srcmap, shl_text_formatting_t txtfmt)
+char_superscript(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	size_t sup_start, sup_len;
 	struct buf *sup;
@@ -1700,12 +1700,12 @@ prefix_uli(uint8_t *data, size_t size)
 
 /* parse_block • parsing of one block, returning next uint8_t to parse */
 static void parse_block(struct buf *ob, struct sd_markdown *rndr,
-			uint8_t *data, size_t size, size_t *srcmap);
+			uint8_t *data, size_t size, srcmap_t *srcmap);
 
 
 /* parse_blockquote • handles parsing of a blockquote fragment */
 static size_t
-parse_blockquote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap)
+parse_blockquote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap)
 {
 	size_t beg, end = 0, pre;
 	struct buf *work = 0;
@@ -1749,7 +1749,7 @@ parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 
 /* parse_blockquote • handles parsing of a regular paragraph */
 static size_t
-parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap)
+parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap)
 {
 	size_t i = 0, end = 0;
 	int level = 0;
@@ -1861,7 +1861,7 @@ parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 
 /* parse_fencedcode • handles parsing of a block-level code fragment */
 static size_t
-parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap)
+parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap)
 {
 	size_t beg, end;
 	struct buf *work = 0;
@@ -1916,7 +1916,7 @@ parse_fencedcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 }
 
 static size_t
-parse_blockcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap)
+parse_blockcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap)
 {
 	size_t beg, end, pre;
 	struct buf *work = 0;
@@ -1961,7 +1961,7 @@ parse_blockcode(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 /* parse_listitem • parsing of a single list item */
 /*	assuming initial prefix is already removed */
 static size_t
-parse_listitem(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, int *flags)
+parse_listitem(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap, int *flags)
 {
 	struct buf *work = 0, *inter = 0;
 	size_t beg = 0, end, pre, sublist = 0, orgpre = 0, i;
@@ -2098,7 +2098,7 @@ parse_listitem(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t s
 
 /* parse_list • parsing ordered or unordered list block */
 static size_t
-parse_list(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap, int flags)
+parse_list(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap, int flags)
 {
 	struct buf *work = 0;
 	size_t i = 0, j;
@@ -2121,7 +2121,7 @@ parse_list(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size,
 
 /* parse_atxheader • parsing of atx-style headers */
 static size_t
-parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap)
+parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap)
 {
 	size_t level = 0;
 	size_t i, end, skip;
@@ -2362,7 +2362,7 @@ parse_table_row(
 	struct sd_markdown *rndr,
 	uint8_t *data,
 	size_t size,
-	size_t *srcmap,
+	srcmap_t *srcmap,
 	size_t columns,
 	int *col_data,
 	int header_flag)
@@ -2428,7 +2428,7 @@ parse_table_header(
 	struct sd_markdown *rndr,
 	uint8_t *data,
 	size_t size,
-	size_t *srcmap,
+	srcmap_t *srcmap,
 	size_t *columns,
 	int **column_data)
 {
@@ -2522,7 +2522,7 @@ parse_table(
 	struct sd_markdown *rndr,
 	uint8_t *data,
 	size_t size,
-	size_t *srcmap)
+	srcmap_t *srcmap)
 {
 	size_t i;
 
@@ -2578,11 +2578,11 @@ parse_table(
 
 /* parse_block • parsing of one block, returning next uint8_t to parse */
 static void
-parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, size_t *srcmap)
+parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap)
 {
 	size_t beg, end, i;
 	uint8_t *txt_data;
-	size_t *txt_srcmap;
+	srcmap_t *txt_srcmap;
 	beg = 0;
 
 	if (rndr->work_bufs[BUFFER_SPAN].size +
@@ -2903,11 +2903,11 @@ static void expand_tabs(struct buf *ob, const uint8_t *line, size_t offset, size
 			size_t orig_ob_size = ob->size;
 			bufput(ob, line + offset + org, i - org);
 
-			size_t *sm = ob->srcmap + orig_ob_size;
+			srcmap_t *sm = ob->srcmap + orig_ob_size;
 			size_t offset_plus_org = offset + org;
 			size_t smlen = (i - org);
 			while (smlen--) {
-				*sm++ = offset_plus_org++;
+				*sm++ = (srcmap_t) (offset_plus_org++);
 			}
 			// FIXME: Handle multi-byte chars
 		}
@@ -3047,9 +3047,9 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 			assert(document[end] != '\r'); // Unlike normal redcarpet, we don't expect to see CR or CRLF here
 			while (end < doc_size && (document[end] == '\n')) {
 				/* add one \n per newline */
-				size_t *sm = text->srcmap + text->size;
+				srcmap_t *sm = text->srcmap + text->size;
 				bufputc(text, '\n');
-				*sm = end;
+				*sm = (srcmap_t) end;
 				end++;
 			}
 

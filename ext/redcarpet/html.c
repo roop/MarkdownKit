@@ -76,19 +76,19 @@ static inline void escape_href(struct buf *ob, const uint8_t *source, size_t len
  * GENERIC RENDERER *
  ********************/
 
-static int index_of_cursor(void *opaque, size_t *srcmap, size_t len, size_t *effective_cursor_pos_index)
+static int index_of_cursor(void *opaque, srcmap_t *srcmap, size_t len, size_t *effective_cursor_pos_index)
 {
 	struct html_renderopt *render_options = opaque;
 	int is_cursor_inserted = render_options->is_cursor_marker_inserted;
 	size_t cursor_pos = render_options->cursor_pos;
 	if (srcmap && !is_cursor_inserted) {
-		while (len > 0 && srcmap[len - 1] == (size_t) -1) len--;
+		while (len > 0 && srcmap[len - 1] < 0) len--;
 		if (len == 0) {
 			return -1;
 		}
 		if ((srcmap[0] <= cursor_pos) && (srcmap[len - 1] >= cursor_pos)) {
 			for (int i = 0; i < len; i++) {
-				if (srcmap[i] != (size_t) -1 && srcmap[i] >= cursor_pos) {
+				if (srcmap[i] >= 0 && srcmap[i] >= cursor_pos) {
 					(*effective_cursor_pos_index) = i;
 					return i;
 				}
@@ -102,11 +102,11 @@ static int index_of_cursor(void *opaque, size_t *srcmap, size_t len, size_t *eff
 }
 
 static void
-rndr_cursor_marker(struct buf *ob, void *opaque, size_t *srcmap, size_t len, size_t effective_cursor_pos_index)
+rndr_cursor_marker(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t len, size_t effective_cursor_pos_index)
 {
 	struct html_renderopt *render_options = opaque;
 	if (render_options->is_cursor_marker_inserted == 0) {
-		while (len > 0 && srcmap[len - 1] == (size_t) -1) len--;
+		while (len > 0 && srcmap[len - 1] < 0) len--;
 		if ((srcmap[0] <= render_options->cursor_pos) && (len > 0 && srcmap[len - 1] + 1 >= render_options->cursor_pos)) {
 			BUFPUTSL(ob, "<span id=\"__cursor_marker__\">|</span>");
 			render_options->is_cursor_marker_inserted = 1;
@@ -116,7 +116,7 @@ rndr_cursor_marker(struct buf *ob, void *opaque, size_t *srcmap, size_t len, siz
 }
 
 static int
-rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque, size_t *srcmap)
+rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque, srcmap_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
 
@@ -160,7 +160,7 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 }
 
 static void
-rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque, size_t *srcmap)
+rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque, srcmap_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
 
@@ -238,7 +238,7 @@ rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque)
 }
 
 static int
-rndr_codespan(struct buf *ob, const struct buf *text, void *opaque, size_t *srcmap)
+rndr_codespan(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
 	struct ast_node *ast_node = ast_new_node("code", ob->size, (text? text->ast : 0));
@@ -748,7 +748,7 @@ rndr_superscript(struct buf *ob, const struct buf *text, void *opaque)
 }
 
 static void
-rndr_normal_text(struct buf *ob, const struct buf *text, void *opaque, size_t *srcmap)
+rndr_normal_text(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap)
 {
 	if (text) {
 		size_t effective_cursor_pos_index = 0;

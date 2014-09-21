@@ -64,7 +64,7 @@ enum mkd_extensions {
 /* sd_callbacks - functions for rendering parsed data */
 struct sd_callbacks {
 	/* block level callbacks - NULL skips the block */
-	void (*blockcode)(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque, size_t *srcmap);
+	void (*blockcode)(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque, srcmap_t *srcmap);
 	void (*blockquote)(struct buf *ob, const struct buf *text, void *opaque);
 	void (*blockhtml)(struct buf *ob,const  struct buf *text, void *opaque);
 	void (*header)(struct buf *ob, const struct buf *text, int level, void *opaque);
@@ -79,8 +79,8 @@ struct sd_callbacks {
 	void (*footnote_def)(struct buf *ob, const struct buf *text, unsigned int num, void *opaque);
 
 	/* span level callbacks - NULL or return 0 prints the span verbatim */
-	int (*autolink)(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque, size_t *srcmap);
-	int (*codespan)(struct buf *ob, const struct buf *text, void *opaque, size_t *srcmap);
+	int (*autolink)(struct buf *ob, const struct buf *link, enum mkd_autolink type, void *opaque, srcmap_t *srcmap);
+	int (*codespan)(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap);
 	int (*double_emphasis)(struct buf *ob, const struct buf *text, void *opaque);
 	int (*emphasis)(struct buf *ob, const struct buf *text, void *opaque);
 	int (*underline)(struct buf *ob, const struct buf *text, void *opaque);
@@ -97,14 +97,14 @@ struct sd_callbacks {
 
 	/* low level callbacks - NULL copies input directly into the output */
 	void (*entity)(struct buf *ob, const struct buf *entity, void *opaque);
-	void (*normal_text)(struct buf *ob, const struct buf *text, void *opaque, size_t *srcmap);
+	void (*normal_text)(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap);
 
 	/* header and footer */
 	void (*doc_header)(struct buf *ob, void *opaque);
 	void (*doc_footer)(struct buf *ob, void *opaque);
 
 	/* Editor cursor position marker */
-	void (*cursor_marker)(struct buf *ob, void *opaque, size_t *srcmap, size_t len, size_t effective_cursor_pos_index);
+	void (*cursor_marker)(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t len, size_t effective_cursor_pos_index);
 };
 
 /* header methods used internally in Redcarpet */

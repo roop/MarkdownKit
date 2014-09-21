@@ -75,14 +75,14 @@ bufgrow(struct buf *buf, size_t neosz)
 	buf->data = neodata;
 
 	if (buf->is_srcmap_enabled) {
-		buf->srcmap = realloc(buf->srcmap, neoasz * sizeof(size_t));
+		buf->srcmap = realloc(buf->srcmap, neoasz * sizeof(srcmap_t));
 		if (!buf->srcmap) {
 			return BUF_ENOMEM;
 		}
 		// Init unassigned bytes in the srcmap to -1 (which indicates
 		// that the byte cannot be mapped to the Markdown source)
 		for (size_t i = buf->asize; i < neoasz; i++) {
-			buf->srcmap[i] = (size_t) (-1);
+			buf->srcmap[i] = -1;
 		}
 	}
 
@@ -181,7 +181,7 @@ bufprintf(struct buf *buf, const char *fmt, ...)
 
 /* bufput: appends raw data to a buffer */
 void
-bufputsm(struct buf *buf, const void *data, const size_t *srcmap, size_t offset, size_t len)
+bufputsm(struct buf *buf, const void *data, const srcmap_t *srcmap, size_t offset, size_t len)
 {
 	assert(buf && buf->unit);
 
@@ -190,7 +190,7 @@ bufputsm(struct buf *buf, const void *data, const size_t *srcmap, size_t offset,
 
 	memcpy(buf->data + buf->size, data + offset, len);
 	if (srcmap && buf->srcmap)
-		memcpy(buf->srcmap + buf->size, srcmap + offset, len * sizeof(size_t));
+		memcpy(buf->srcmap + buf->size, srcmap + offset, len * sizeof(srcmap_t));
 
 	buf->size += len;
 }
@@ -198,7 +198,7 @@ bufputsm(struct buf *buf, const void *data, const size_t *srcmap, size_t offset,
 void
 bufput(struct buf *buf, const void *data, size_t len)
 {
-	bufputsm(buf, data, (const size_t *) 0, (size_t) 0, len);
+	bufputsm(buf, data, (const srcmap_t *) 0, (size_t) 0, len);
 }
 
 /* bufputs: appends a NUL-terminated string to a buffer */
@@ -220,7 +220,7 @@ bufputc(struct buf *buf, int c)
 
 	buf->data[buf->size] = c;
 	if (buf->is_srcmap_enabled && buf->srcmap)
-		buf->srcmap[buf->size] = (size_t) -1;
+		buf->srcmap[buf->size] = -1;
 	buf->size += 1;
 }
 
