@@ -219,6 +219,8 @@ bufputc(struct buf *buf, int c)
 		return;
 
 	buf->data[buf->size] = c;
+	if (buf->is_srcmap_enabled && buf->srcmap)
+		buf->srcmap[buf->size] = (size_t) -1;
 	buf->size += 1;
 }
 
