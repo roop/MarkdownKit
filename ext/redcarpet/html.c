@@ -397,7 +397,8 @@ char *header_anchor(struct buf *text)
 }
 
 static void
-rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque)
+rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque,
+			srcmap_t *srcmap, size_t srcmap_len, size_t srcmap_content_offset, size_t srcmap_content_len)
 {
 	struct html_renderopt *options = opaque;
 
@@ -419,7 +420,13 @@ rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque)
 	ast_node->close_tag_length = 5;
 	buf_append_ast_node(ob, ast_node);
 
+	// If cursor is in leading ###s, add marker before the header content
+	rndr_cursor_marker(ob, opaque, srcmap, srcmap_content_offset, srcmap_content_offset - 1);
 	if (text) bufput(ob, text->data, text->size);
+	// If cursor is in trailing ###s or ===s, add marker after the header content
+	rndr_cursor_marker(ob, opaque, srcmap + srcmap_content_offset + srcmap_content_len,
+					   srcmap_len - srcmap_content_offset - srcmap_content_len, 0);
+
 	bufprintf(ob, "</h%d>\n", level);
 }
 

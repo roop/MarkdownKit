@@ -1820,8 +1820,8 @@ parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 
 		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + i, end - i, SHL_SETEXT_HEADER_UNDERLINE);
 
+		size_t beg = 0;
 		if (work.size) {
-			size_t beg;
 			i = work.size;
 			work.size -= 1;
 
@@ -1851,7 +1851,7 @@ parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 		parse_inline(header_work, rndr, work.data, work.size, srcmap, SHL_HEADER_CONTENT);
 
 		if (rndr->cb.header)
-			rndr->cb.header(ob, header_work, (int)level, rndr->opaque);
+			rndr->cb.header(ob, header_work, (int)level, rndr->opaque, srcmap, end - beg, 0, work.size);
 
 		rndr_popbuf(rndr, BUFFER_SPAN);
 	}
@@ -2150,7 +2150,7 @@ parse_atxheader(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 		parse_inline(work, rndr, data + i, end - i, srcmap + i, SHL_HEADER_CONTENT);
 
 		if (rndr->cb.header)
-			rndr->cb.header(ob, work, (int)level, rndr->opaque);
+			rndr->cb.header(ob, work, (int)level, rndr->opaque, srcmap, skip, i, end - i);
 
 		rndr_popbuf(rndr, BUFFER_SPAN);
 	}
