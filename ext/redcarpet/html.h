@@ -39,7 +39,7 @@ struct html_renderopt {
 
 	/* extra data */
 	size_t cursor_pos; /* Editor cursor pos */
-	size_t effective_cursor_pos; /* Effective editor cursor pos that matches the marker inserted in the HTML */
+	srcmap_t effective_cursor_pos; /* Effective editor cursor pos that matches the marker inserted in the HTML */
 	int is_cursor_marker_inserted; /* Non-zero if the cursor marker has been inserted into the HTML */
 };
 
