@@ -89,6 +89,7 @@ void bufdebugsm(struct buf *);
 
 /* Abstract Syntax Tree */
 void buf_append_ast_node(struct buf *, struct ast_node *);
+void bufreleaseast(struct buf *buf);
 void bufdebugast(struct buf *buf);
 
 #ifdef __cplusplus

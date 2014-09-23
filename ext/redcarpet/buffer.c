@@ -304,3 +304,19 @@ void bufdebugast(struct buf *buf)
 {
 	ast_print(buf->ast, buf, 0, 0);
 }
+
+static void ast_release(struct ast_node *ast)
+{
+	if (!ast)
+		return;
+	ast_release(ast->children);
+	ast_release(ast->next);
+	free(ast);
+}
+
+void bufreleaseast(struct buf *buf)
+{
+	if (!buf)
+		return;
+	ast_release(buf->ast);
+}
