@@ -3044,12 +3044,14 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 			if (end > beg)
 				expand_tabs(text, document, beg, end - beg);
 
-			assert(document[end] != '\r'); // Unlike normal redcarpet, we don't expect to see CR or CRLF here
-			while (end < doc_size && (document[end] == '\n')) {
-				/* add one \n per newline */
+			while (end < doc_size &&
+				   (document[end] == '\n' ||
+					((document[end] == '\r') && (end + 1 < doc_size) && (document[end + 1] == '\n'))
+					)) {
+				/* add one \n for each line break (either LF or CRLF) */
 				srcmap_t *sm = text->srcmap + text->size;
 				bufputc(text, '\n');
-				*sm = (srcmap_t) end;
+				*sm = (srcmap_t) ((document[end] == '\n')? end : end + 1);
 				end++;
 			}
 
