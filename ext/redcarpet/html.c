@@ -748,7 +748,13 @@ static int
 rndr_superscript(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (!text || !text->size) return 0;
+
+	struct ast_node *ast_node = ast_new_node("mark", ob->size, text->ast);
 	BUFPUTSL(ob, "<sup>");
+	ast_node->content_offset = ob->size;
+	ast_node->content_length = text->size;
+	ast_node->close_tag_length = 6;
+	buf_append_ast_node(ob, ast_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</sup>");
 	return 1;
