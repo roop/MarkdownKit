@@ -108,7 +108,7 @@ rndr_cursor_marker(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t len, s
 	if (render_options->is_cursor_marker_inserted == 0) {
 		while (len > 0 && srcmap[len - 1] < 0) len--;
 		if ((srcmap[0] <= render_options->cursor_pos) && (len > 0 && srcmap[len - 1] + 1 >= render_options->cursor_pos)) {
-			BUFPUTSL(ob, "<span id=\"__cursor_marker__\">|</span>");
+			BUFPUTSL(ob, "<span id=\"__cursor_marker__\"></span>");
 			render_options->is_cursor_marker_inserted = 1;
 			render_options->effective_cursor_pos = srcmap[effective_cursor_pos_index];
 		}
