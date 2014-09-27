@@ -34,7 +34,7 @@
 #ifndef STREAMHTMLPARSER_JSPARSER_H
 #define STREAMHTMLPARSER_JSPARSER_H
 
-#include <streamhtmlparser/statemachine.h>
+#include "statemachine.h"
 
 /* Size of the ring buffer used to lookup the last token in the javascript
  * stream. The size is pretty much arbitrary at this point but must be bigger

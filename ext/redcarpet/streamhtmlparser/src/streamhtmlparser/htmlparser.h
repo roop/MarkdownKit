@@ -34,8 +34,8 @@
 #ifndef STREAMHTMLPARSER_HTMLPARSER_H
 #define STREAMHTMLPARSER_HTMLPARSER_H
 
-#include <streamhtmlparser/statemachine.h>
-#include <streamhtmlparser/jsparser.h>
+#include "statemachine.h"
+#include "jsparser.h"
 
 /* entity filter */
 

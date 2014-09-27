@@ -37,7 +37,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include <streamhtmlparser/statemachine.h>
+#include "streamhtmlparser/statemachine.h"
 
 /* So we can support both C and C++ compilers, we use the CAST() macro instead
  * of using C style casts or static_cast<>() directly.
