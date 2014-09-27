@@ -21,7 +21,7 @@
 #include "stack.h"
 
 #include "shl.h"
-#include "ast.h"
+#include "dom.h"
 
 #include <assert.h>
 #include <string.h>
@@ -169,7 +169,7 @@ rndr_newbuf(struct sd_markdown *rndr, int type)
 		work = pool->item[pool->size++];
 		work->size = 0;
 		work->is_srcmap_enabled = 0;
-		work->ast = 0;
+		work->dom = 0;
 	} else {
 		work = bufnew(buf_size[type]);
 		redcarpet_stack_push(pool, work);

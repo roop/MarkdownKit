@@ -36,8 +36,8 @@ typedef enum {
 	BUF_ENOMEM = -1,
 } buferror_t;
 
-/* struct ast_node: Abstract Syntax Tree node */
-struct ast_node;
+/* struct dom_node: Abstract Syntax Tree node */
+struct dom_node;
 
 /* Type for byte-index into the original markdown source */
 typedef int32_t srcmap_t;
@@ -51,7 +51,7 @@ struct buf {
 	/* Extended by roop */
 	srcmap_t *srcmap; /* byte-indices into the original markdown source */
 	int is_srcmap_enabled;
-    struct ast_node *ast;
+	struct dom_node *dom;
 };
 
 /* BUFPUTSL: optimized bufputs of a string literal */
@@ -91,9 +91,9 @@ void bufprintf(struct buf *, const char *, ...) __attribute__ ((format (printf, 
 void bufdebugsm(struct buf *);
 
 /* Abstract Syntax Tree */
-void buf_append_ast_node(struct buf *, struct ast_node *);
+void buf_append_dom_node(struct buf *, struct dom_node *);
 void bufreleaseast(struct buf *buf);
-void bufdebugast(struct buf *buf);
+void bufdebugdom(struct buf *buf);
 
 #ifdef __cplusplus
 }

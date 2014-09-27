@@ -25,7 +25,7 @@
 #include <assert.h>
 
 #include "houdini.h"
-#include "ast.h"
+#include "dom.h"
 
 #define USE_XHTML(opt) (opt->flags & HTML_USE_XHTML)
 
@@ -166,8 +166,8 @@ rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, v
 
 	if (ob->size) bufputc(ob, '\n');
 
-	struct ast_node *ast_node = ast_new_node("pre", ob->size, 0);
-	ast_node->content_offset = ob->size + 5;
+	struct dom_node *dom_node = dom_new_node("pre", ob->size, 0);
+	dom_node->content_offset = ob->size + 5;
 	if (lang && lang->size) {
 		size_t i, cls;
 		if (options->flags & HTML_PRETTIFY) {
@@ -218,21 +218,21 @@ rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, v
 
 	BUFPUTSL(ob, "</code></pre>\n");
 
-	ast_node->close_tag_length = 6;
-	ast_node->content_length = ob->size - 7 - ast_node->content_offset;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->close_tag_length = 6;
+	dom_node->content_length = ob->size - 7 - dom_node->content_offset;
+	buf_append_dom_node(ob, dom_node);
 }
 
 static void
 rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (ob->size) bufputc(ob, '\n');
-	struct ast_node *ast_node = ast_new_node("blockquote", ob->size, (text? text->ast : 0));
+	struct dom_node *dom_node = dom_new_node("blockquote", ob->size, (text? text->dom : 0));
 	BUFPUTSL(ob, "<blockquote>\n");
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = (text? text->size : 0);
-	ast_node->close_tag_length = 13;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = (text? text->size : 0);
+	dom_node->close_tag_length = 13;
+	buf_append_dom_node(ob, dom_node);
 	if (text) bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</blockquote>\n");
 }
@@ -241,12 +241,12 @@ static int
 rndr_codespan(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap)
 {
 	struct html_renderopt *options = opaque;
-	struct ast_node *ast_node = ast_new_node("code", ob->size, (text? text->ast : 0));
+	struct dom_node *dom_node = dom_new_node("code", ob->size, (text? text->dom : 0));
 	if (options->flags & HTML_PRETTIFY)
 		BUFPUTSL(ob, "<code class=\"prettyprint\">");
 	else
 		BUFPUTSL(ob, "<code>");
-	ast_node->content_offset = ob->size;
+	dom_node->content_offset = ob->size;
 
 	if (text) {
 		size_t effective_cursor_pos_index = 0;
@@ -263,9 +263,9 @@ rndr_codespan(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *sr
 		}
 	}
 
-	ast_node->content_length = ob->size - ast_node->content_offset;
-	ast_node->close_tag_length = 7;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 7;
+	buf_append_dom_node(ob, dom_node);
 	BUFPUTSL(ob, "</code>");
 	return 1;
 }
@@ -276,12 +276,12 @@ rndr_strikethrough(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
-	struct ast_node *ast_node = ast_new_node("del", ob->size, text->ast);
+	struct dom_node *dom_node = dom_new_node("del", ob->size, text->dom);
 	BUFPUTSL(ob, "<del>");
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = text->size;
-	ast_node->close_tag_length = 6;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 6;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</del>");
 	return 1;
@@ -293,12 +293,12 @@ rndr_double_emphasis(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
-	struct ast_node *ast_node = ast_new_node("strong", ob->size, text->ast);
+	struct dom_node *dom_node = dom_new_node("strong", ob->size, text->dom);
 	BUFPUTSL(ob, "<strong>");
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = text->size;
-	ast_node->close_tag_length = 9;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 9;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</strong>");
 
@@ -309,12 +309,12 @@ static int
 rndr_emphasis(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (!text || !text->size) return 0;
-	struct ast_node *ast_node = ast_new_node("em", ob->size, text->ast);
+	struct dom_node *dom_node = dom_new_node("em", ob->size, text->dom);
 	BUFPUTSL(ob, "<em>");
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = text->size;
-	ast_node->close_tag_length = 5;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 	if (text) bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</em>");
 	return 1;
@@ -326,12 +326,12 @@ rndr_underline(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
-	struct ast_node *ast_node = ast_new_node("u", ob->size, text->ast);
+	struct dom_node *dom_node = dom_new_node("u", ob->size, text->dom);
 	BUFPUTSL(ob, "<u>");
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = text->size;
-	ast_node->close_tag_length = 4;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 4;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</u>");
 
@@ -344,12 +344,12 @@ rndr_highlight(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
-	struct ast_node *ast_node = ast_new_node("mark", ob->size, text->ast);
+	struct dom_node *dom_node = dom_new_node("mark", ob->size, text->dom);
 	BUFPUTSL(ob, "<mark>");
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = text->size;
-	ast_node->close_tag_length = 7;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 7;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</mark>");
 
@@ -362,12 +362,12 @@ rndr_quote(struct buf *ob, const struct buf *text, void *opaque)
 	if (!text || !text->size)
 		return 0;
 
-	struct ast_node *ast_node = ast_new_node("q", ob->size, text->ast);
+	struct dom_node *dom_node = dom_new_node("q", ob->size, text->dom);
 	BUFPUTSL(ob, "<q>");
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = text->size;
-	ast_node->close_tag_length = 4;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 4;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</q>");
 
@@ -408,17 +408,17 @@ rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque,
 	const char *h[] = { "", "h1", "h2", "h3", "h4", "h5", "h6" };
 	assert(level > 0);
 	assert(level <= 6);
-	struct ast_node *ast_node = ast_new_node(h[level], ob->size, (text? text->ast : 0));
+	struct dom_node *dom_node = dom_new_node(h[level], ob->size, (text? text->dom : 0));
 
 	if ((options->flags & HTML_TOC) && (level <= options->toc_data.nesting_level))
 		bufprintf(ob, "<h%d id=\"%s\">", level, header_anchor(text));
 	else
 		bufprintf(ob, "<h%d>", level);
 
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = (text? text->size : 0);
-	ast_node->close_tag_length = 5;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = (text? text->size : 0);
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 
 	// If cursor is in leading ###s, add marker before the header content
 	rndr_cursor_marker(ob, opaque, srcmap, srcmap_content_offset, srcmap_content_offset - 1);
@@ -438,7 +438,7 @@ rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const
 	if (link != NULL && (options->flags & HTML_SAFELINK) != 0 && !sd_autolink_issafe(link->data, link->size))
 		return 0;
 
-	struct ast_node *ast_node = ast_new_node("a", ob->size, (content? content->ast : 0));
+	struct dom_node *dom_node = dom_new_node("a", ob->size, (content? content->dom : 0));
 
 	BUFPUTSL(ob, "<a href=\"");
 
@@ -458,10 +458,10 @@ rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const
 		BUFPUTSL(ob, "\">");
 	}
 
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = (content? content->size : 0);
-	ast_node->close_tag_length = 4;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = (content? content->size : 0);
+	dom_node->close_tag_length = 4;
+	buf_append_dom_node(ob, dom_node);
 
 	if (content && content->size) bufput(ob, content->data, content->size);
 	BUFPUTSL(ob, "</a>");
@@ -472,12 +472,12 @@ static void
 rndr_list(struct buf *ob, const struct buf *text, int flags, void *opaque)
 {
 	if (ob->size) bufputc(ob, '\n');
-	struct ast_node *ast_node = ast_new_node(flags & MKD_LIST_ORDERED ? "ol" : "ul", ob->size, (text? text->ast : 0));
+	struct dom_node *dom_node = dom_new_node(flags & MKD_LIST_ORDERED ? "ol" : "ul", ob->size, (text? text->dom : 0));
 	bufput(ob, flags & MKD_LIST_ORDERED ? "<ol>\n" : "<ul>\n", 5);
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = (text? text->size : 0);
-	ast_node->close_tag_length = 5;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = (text? text->size : 0);
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 	if (text) bufput(ob, text->data, text->size);
 	bufput(ob, flags & MKD_LIST_ORDERED ? "</ol>\n" : "</ul>\n", 6);
 }
@@ -485,9 +485,9 @@ rndr_list(struct buf *ob, const struct buf *text, int flags, void *opaque)
 static void
 rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque)
 {
-	struct ast_node *ast_node = ast_new_node("li", ob->size, (text? text->ast : 0));
+	struct dom_node *dom_node = dom_new_node("li", ob->size, (text? text->dom : 0));
 	BUFPUTSL(ob, "<li>");
-	ast_node->content_offset = ob->size;
+	dom_node->content_offset = ob->size;
 	if (text) {
 		size_t size = text->size;
 		while (size && text->data[size - 1] == '\n')
@@ -496,9 +496,9 @@ rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque)
 		bufput(ob, text->data, size);
 	}
 	BUFPUTSL(ob, "</li>\n");
-	ast_node->close_tag_length = 5;
-	ast_node->content_length = ob->size - 6 - ast_node->content_offset;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->close_tag_length = 5;
+	dom_node->content_length = ob->size - 6 - dom_node->content_offset;
+	buf_append_dom_node(ob, dom_node);
 }
 
 static void
@@ -517,9 +517,9 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque)
 	if (i == text->size)
 		return;
 
-	struct ast_node *ast_node = ast_new_node("p", ob->size, text->ast);
+	struct dom_node *dom_node = dom_new_node("p", ob->size, text->dom);
 	BUFPUTSL(ob, "<p>");
-	ast_node->content_offset = ob->size;
+	dom_node->content_offset = ob->size;
 	if (options->flags & HTML_HARD_WRAP) {
 		size_t org;
 		while (i < text->size) {
@@ -544,9 +544,9 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque)
 		bufput(ob, &text->data[i], text->size - i);
 	}
 	BUFPUTSL(ob, "</p>\n");
-	ast_node->close_tag_length = 4;
-	ast_node->content_length = ob->size - 5 - ast_node->content_offset;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->close_tag_length = 4;
+	dom_node->content_length = ob->size - 5 - dom_node->content_offset;
+	buf_append_dom_node(ob, dom_node);
 }
 
 static void
@@ -568,14 +568,14 @@ static int
 rndr_triple_emphasis(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (!text || !text->size) return 0;
-	struct ast_node *ast_node = ast_new_node("strong", ob->size, (text? text->ast : 0));
-	ast_node->content_offset = ob->size + 8;
+	struct dom_node *dom_node = dom_new_node("strong", ob->size, (text? text->dom : 0));
+	dom_node->content_offset = ob->size + 8;
 	BUFPUTSL(ob, "<strong><em>");
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</em></strong>");
-	ast_node->close_tag_length = 9;
-	ast_node->content_length = ob->size - ast_node->close_tag_length - ast_node->content_offset;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->close_tag_length = 9;
+	dom_node->content_length = ob->size - dom_node->close_tag_length - dom_node->content_offset;
+	buf_append_dom_node(ob, dom_node);
 	return 1;
 }
 
@@ -644,8 +644,8 @@ rndr_table(struct buf *ob, const struct buf *header, const struct buf *body, voi
 {
 	if (ob->size) bufputc(ob, '\n');
 
-	struct ast_node *thead_node = ast_new_node("thead", 0, (header? header->ast : 0));
-	struct ast_node *table_node = ast_new_node("table", ob->size, thead_node);
+	struct dom_node *thead_node = dom_new_node("thead", 0, (header? header->dom : 0));
+	struct dom_node *table_node = dom_new_node("table", ob->size, thead_node);
 	table_node->content_offset = ob->size + 7;
 	size_t thead_content_offset = 0, tbody_content_offset = 0;
 
@@ -660,7 +660,7 @@ rndr_table(struct buf *ob, const struct buf *header, const struct buf *body, voi
 	thead_node->content_length = ob->size - thead_content_offset;
 	thead_node->close_tag_length = 8;
 	size_t tbody_elem_offset = thead_node->content_offset + thead_node->content_length + thead_node->close_tag_length;
-	struct ast_node *tbody_node = ast_new_node("tbody", tbody_elem_offset, (body? body->ast : 0));
+	struct dom_node *tbody_node = dom_new_node("tbody", tbody_elem_offset, (body? body->dom : 0));
 	thead_node->next = tbody_node;
 
 	BUFPUTSL(ob, "</thead><tbody>\n");
@@ -678,24 +678,24 @@ rndr_table(struct buf *ob, const struct buf *header, const struct buf *body, voi
 	BUFPUTSL(ob, "</tbody></table>\n");
 
 	table_node->close_tag_length = 8;
-	buf_append_ast_node(ob, table_node);
+	buf_append_dom_node(ob, table_node);
 }
 
 static void
 rndr_tablerow(struct buf *ob, const struct buf *text, void *opaque)
 {
-	struct ast_node *ast_node = ast_new_node("tr", ob->size, (text? text->ast : 0));
+	struct dom_node *dom_node = dom_new_node("tr", ob->size, (text? text->dom : 0));
 
 	BUFPUTSL(ob, "<tr>\n");
 
-	ast_node->content_offset = ob->size;
+	dom_node->content_offset = ob->size;
 
 	if (text)
 		bufput(ob, text->data, text->size);
 
-	ast_node->content_length = ob->size - ast_node->content_offset;
-	ast_node->close_tag_length = 5;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 
 	BUFPUTSL(ob, "</tr>\n");
 }
@@ -703,7 +703,7 @@ rndr_tablerow(struct buf *ob, const struct buf *text, void *opaque)
 static void
 rndr_tablecell(struct buf *ob, const struct buf *text, int flags, void *opaque)
 {
-	struct ast_node *ast_node = ast_new_node(flags & MKD_TABLE_HEADER? "th" : "td", ob->size, (text? text->ast : 0));
+	struct dom_node *dom_node = dom_new_node(flags & MKD_TABLE_HEADER? "th" : "td", ob->size, (text? text->dom : 0));
 
 	if (flags & MKD_TABLE_HEADER) {
 		BUFPUTSL(ob, "<th");
@@ -728,14 +728,14 @@ rndr_tablecell(struct buf *ob, const struct buf *text, int flags, void *opaque)
 		BUFPUTSL(ob, ">");
 	}
 
-	ast_node->content_offset = ob->size;
+	dom_node->content_offset = ob->size;
 
 	if (text)
 		bufput(ob, text->data, text->size);
 
-	ast_node->content_length = ob->size - ast_node->content_offset;
-	ast_node->close_tag_length = 5;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 
 	if (flags & MKD_TABLE_HEADER) {
 		BUFPUTSL(ob, "</th>\n");
@@ -749,12 +749,12 @@ rndr_superscript(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (!text || !text->size) return 0;
 
-	struct ast_node *ast_node = ast_new_node("mark", ob->size, text->ast);
+	struct dom_node *dom_node = dom_new_node("mark", ob->size, text->dom);
 	BUFPUTSL(ob, "<sup>");
-	ast_node->content_offset = ob->size;
-	ast_node->content_length = text->size;
-	ast_node->close_tag_length = 6;
-	buf_append_ast_node(ob, ast_node);
+	dom_node->content_offset = ob->size;
+	dom_node->content_length = text->size;
+	dom_node->close_tag_length = 6;
+	buf_append_dom_node(ob, dom_node);
 	bufput(ob, text->data, text->size);
 	BUFPUTSL(ob, "</sup>");
 	return 1;

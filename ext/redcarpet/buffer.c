@@ -18,7 +18,7 @@
 #define BUFFER_MAX_ALLOC_SIZE (1024 * 1024 * 16) //16mb
 
 #include "buffer.h"
-#include "ast.h"
+#include "dom.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,7 +104,7 @@ bufnew(size_t unit)
 		ret->unit = unit;
 		ret->is_srcmap_enabled = 0;
 		ret->srcmap = 0;
-		ret->ast = 0;
+		ret->dom = 0;
 	}
 	return ret;
 }
@@ -251,12 +251,12 @@ void bufdebugsm(struct buf *buf)
 	printf("\n");
 }
 
-void buf_append_ast_node(struct buf *buf, struct ast_node *node)
+void buf_append_dom_node(struct buf *buf, struct dom_node *node)
 {
-	if (buf->ast == 0) {
-		buf->ast = node;
+	if (buf->dom == 0) {
+		buf->dom = node;
 	} else {
-		ast_last_node(buf->ast)->next = node;
+		dom_last_node(buf->dom)->next = node;
 	}
 }
 
@@ -283,36 +283,36 @@ static void print_in_one_line(const char *str, size_t len)
 
 // #define USE_CONTENT_OFFSET
 
-void ast_print(struct ast_node *ast_node, struct buf *buf, int depth, size_t offset)
+void dom_print(struct dom_node *dom_node, struct buf *buf, int depth, size_t offset)
 {
-	if (ast_node == 0 || buf == 0) {
+	if (dom_node == 0 || buf == 0) {
 		return;
 	}
-	printf("%*s tag: [%s] contents: \"", depth * 2, "", ast_node->html_tag_name);
+	printf("%*s tag: [%s] contents: \"", depth * 2, "", dom_node->html_tag_name);
 #ifdef USE_CONTENT_OFFSET
-	size_t ast_offset = ast_node->content_offset;
-	size_t ast_length = ast_node->content_length;
+	size_t dom_offset = dom_node->content_offset;
+	size_t dom_length = dom_node->content_length;
 #else
-	size_t ast_offset = ast_node->elem_offset;
-	size_t ast_length = ast_node->content_offset + ast_node->content_length + ast_node->close_tag_length - ast_offset;
+	size_t dom_offset = dom_node->elem_offset;
+	size_t dom_length = dom_node->content_offset + dom_node->content_length + dom_node->close_tag_length - dom_offset;
 #endif
-	print_in_one_line((const char *) buf->data + offset + ast_offset, ast_length);
+	print_in_one_line((const char *) buf->data + offset + dom_offset, dom_length);
 	printf("\"\n");
-	ast_print(ast_node->children, buf, depth + 1, offset + ast_node->content_offset);
-	ast_print(ast_node->next, buf, depth, offset);
+	dom_print(dom_node->children, buf, depth + 1, offset + dom_node->content_offset);
+	dom_print(dom_node->next, buf, depth, offset);
 }
 
-void bufdebugast(struct buf *buf)
+void bufdebugdom(struct buf *buf)
 {
-	ast_print(buf->ast, buf, 0, 0);
+	dom_print(buf->dom, buf, 0, 0);
 }
 
-static void ast_release(struct ast_node *ast)
+static void dom_release(struct dom_node *ast)
 {
 	if (!ast)
 		return;
-	ast_release(ast->children);
-	ast_release(ast->next);
+	dom_release(ast->children);
+	dom_release(ast->next);
 	free(ast);
 }
 
@@ -320,5 +320,5 @@ void bufreleaseast(struct buf *buf)
 {
 	if (!buf)
 		return;
-	ast_release(buf->ast);
+	dom_release(buf->dom);
 }

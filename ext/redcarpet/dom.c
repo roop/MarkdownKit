@@ -14,23 +14,30 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef __AST_H
-#define __AST_H
-
+#include "dom.h"
+#include <stdlib.h>
 #include <stddef.h>
 
-/* struct ast_node: Abstract Syntax Tree node */
-struct ast_node {
-	const char *html_tag_name; // "p" for <p> tags
-	size_t elem_offset;                    // offset of "<p>blah</p>" in parent node's text
-	size_t close_tag_length;               // length of "</p>"
-	size_t content_offset, content_length; // range of "blah" in parent node's text
-	// void *additional_data;     // Arbitrary additional data
-	struct ast_node *next;
-	struct ast_node *children;
-};
+struct dom_node *dom_new_node(const char *html_tag_name, size_t elem_offset, struct dom_node *child)
+{
+	struct dom_node *dom_node = malloc(sizeof(struct dom_node));
+	dom_node->html_tag_name = html_tag_name;
+	dom_node->elem_offset = elem_offset;
+	dom_node->close_tag_length = 0;
+	dom_node->content_offset = 0;
+	dom_node->content_length = 0;
+	dom_node->next = 0;
+	dom_node->children = child;
+	return dom_node;
+}
 
-struct ast_node *ast_new_node(const char *html_tag_name, size_t elem_offset, struct ast_node *child);
-struct ast_node *ast_last_node(struct ast_node *node);
-
-#endif // __AST_H
+struct dom_node *dom_last_node(struct dom_node *node)
+{
+	if (node == 0) {
+		return 0;
+	}
+	while (node->next) {
+		node = node->next;
+	}
+	return node;
+}
