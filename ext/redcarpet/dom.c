@@ -26,6 +26,7 @@ struct dom_node *dom_new_node(const char *html_tag_name, size_t elem_offset, str
 	dom_node->close_tag_length = 0;
 	dom_node->content_offset = 0;
 	dom_node->content_length = 0;
+	dom_node->raw_html_element_type = NOT_RAW_HTML;
 	dom_node->next = 0;
 	dom_node->children = child;
 	return dom_node;
@@ -40,4 +41,16 @@ struct dom_node *dom_last_node(struct dom_node *node)
 		node = node->next;
 	}
 	return node;
+}
+
+struct dom_node* dom_last_open_raw_html_node(struct dom_node *dom_tree)
+{
+	if (!dom_tree)
+		return 0;
+	struct dom_node *last_node = dom_last_node(dom_tree);
+	if (last_node->raw_html_element_type == UNCLOSED_RAW_HTML_ELEMENT) {
+		struct dom_node *last_child = dom_last_open_raw_html_node(last_node->children);
+		return (last_child? last_child : last_node);
+	}
+	return 0;
 }

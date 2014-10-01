@@ -26,6 +26,7 @@
 
 #include "houdini.h"
 #include "dom.h"
+#include "raw_html.h"
 
 #define USE_XHTML(opt) (opt->flags & HTML_USE_XHTML)
 
@@ -560,7 +561,7 @@ rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque)
 	while (org < sz && text->data[org] == '\n') org++;
 	if (org >= sz) return;
 	if (ob->size) bufputc(ob, '\n');
-	bufput(ob, text->data + org, sz - org);
+	add_raw_html(ob, (const char *) text->data + org, sz - org);
 	bufputc(ob, '\n');
 }
 

@@ -19,12 +19,21 @@
 
 #include <stddef.h>
 
+enum raw_html_t {
+	NOT_RAW_HTML = 0,
+	CLOSED_RAW_HTML_ELEMENT = 1,
+	UNCLOSED_RAW_HTML_ELEMENT = 2,
+	UNMATCHED_RAW_HTML_END_TAG = 3,
+	MALFORMED_RAW_HTML_TAG = 4,
+};
+
 /* struct ast_node: Abstract Syntax Tree node */
-struct dom_node {
+struct dom_node {              // Assuming "<tag><subtag></subtag><p>blah</p></tag>"
 	const char *html_tag_name; // "p" for <p> tags
-	size_t elem_offset;                    // offset of "<p>blah</p>" in parent node's text
-	size_t close_tag_length;               // length of "</p>"
-	size_t content_offset, content_length; // range of "blah" in parent node's text
+	size_t elem_offset;        // invalid for raw_html // offset of "<p>blah</p>" in parent node's (i.e. "tag" 's) text
+	size_t close_tag_length;   // invalid for raw_html // length of "</p>"
+	size_t content_offset, content_length; // range of "blah" in parent node's (i.e. "tag" 's) text
+	enum raw_html_t raw_html_element_type;
 	// void *additional_data;     // Arbitrary additional data
 	struct dom_node *next;
 	struct dom_node *children;
@@ -32,5 +41,6 @@ struct dom_node {
 
 struct dom_node *dom_new_node(const char *html_tag_name, size_t elem_offset, struct dom_node *child);
 struct dom_node *dom_last_node(struct dom_node *node);
+struct dom_node* dom_last_open_raw_html_node(struct dom_node *dom_tree);
 
 #endif // __DOM_H
