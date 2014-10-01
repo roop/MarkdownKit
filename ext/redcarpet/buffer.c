@@ -281,7 +281,7 @@ static void print_in_one_line(const char *str, size_t len)
 	}
 }
 
-// #define USE_CONTENT_OFFSET
+#define USE_CONTENT_OFFSET
 
 void dom_print(struct dom_node *dom_node, struct buf *buf, int depth, size_t offset)
 {
@@ -297,7 +297,7 @@ void dom_print(struct dom_node *dom_node, struct buf *buf, int depth, size_t off
 	size_t dom_length = dom_node->content_offset + dom_node->content_length + dom_node->close_tag_length - dom_offset;
 #endif
 	print_in_one_line((const char *) buf->data + offset + dom_offset, dom_length);
-	printf("\"\n");
+	printf("\"%s\n", (dom_node->raw_html_element_type > 1? " BAD RAW HTML" : ""));
 	dom_print(dom_node->children, buf, depth + 1, offset + dom_node->content_offset);
 	dom_print(dom_node->next, buf, depth, offset);
 }
