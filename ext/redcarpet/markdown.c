@@ -993,7 +993,7 @@ char_langle_tag(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap + end - 1, 1, SHL_AUTOLINK_ANGLE_BRACKETS); // ">"
 		}
 		else if (rndr->cb.raw_html_tag)
-			ret = rndr->cb.raw_html_tag(ob, &work, rndr->opaque);
+			ret = rndr->cb.raw_html_tag(ob, &work, rndr->opaque, srcmap, rndr->shl);
 	}
 
 	if (!ret) return 0;

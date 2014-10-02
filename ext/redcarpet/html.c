@@ -610,7 +610,7 @@ rndr_image(struct buf *ob, const struct buf *link, const struct buf *title, cons
 }
 
 static int
-rndr_raw_html(struct buf *ob, const struct buf *text, void *opaque)
+rndr_raw_html(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap, void *shl)
 {
 	struct html_renderopt *options = opaque;
 
@@ -636,7 +636,8 @@ rndr_raw_html(struct buf *ob, const struct buf *text, void *opaque)
 		sdhtml_is_tag(text->data, text->size, "img"))
 		return 1;
 
-	bufput(ob, text->data, text->size);
+	add_raw_html(ob, (const char *) text->data, text->size, srcmap, shl);
+
 	return 1;
 }
 
