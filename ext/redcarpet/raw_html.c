@@ -18,6 +18,7 @@
 #include "dom.h"
 #include "buffer.h"
 #include "shl.h"
+#include "cursor_marker.h"
 #include "streamhtmlparser/src/streamhtmlparser/htmlparser.h"
 #include <stdlib.h>
 #include <stddef.h>
@@ -36,8 +37,10 @@ struct callback_ctx {
 	int is_pos_valid;
 	size_t tag_start_pos;
 	size_t prev_tag_end_pos;
+	const char *data;
 	srcmap_t *srcmap;
 	void *shl;
+	void *opaque;
 
 	size_t stack[STACK_SIZE]; // offsets
 	unsigned int stack_depth;
@@ -93,6 +96,50 @@ static void dom_append_raw_html_node(struct dom_node *dom_tree, struct dom_node 
 	}
 }
 
+#define START_TAG 1
+#define END_TAG 2
+
+static void htmlTagIdentified(struct callback_ctx *ctx, size_t tag_end_pos, int start_or_end_tag)
+{
+	size_t text_start_pos = ctx->prev_tag_end_pos;
+	size_t tag_start_pos = ctx->tag_start_pos;
+	size_t text_size = (tag_start_pos - text_start_pos);
+
+	// Handle the text before the HTML tag
+
+	if (text_size) {
+		shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + text_start_pos, text_size,
+												SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
+		size_t effective_cursor_pos_index = 0;
+		int ci = index_of_cursor(ctx->opaque, ctx->srcmap + text_start_pos, text_size, &effective_cursor_pos_index);
+		if (ci >= 0) { // Cursor is contained in this text
+			assert(ci <= text_size);
+			if (ci > 0)
+				bufput(ctx->ob, ctx->data + text_start_pos, ci);
+			rndr_cursor_marker(ctx->ob, ctx->opaque, ctx->srcmap + text_start_pos, text_size, effective_cursor_pos_index);
+			if (text_size > ci)
+				bufput(ctx->ob, ctx->data + text_start_pos + ci, text_size - ci);
+		} else { // Cursor is NOT contained in this text
+			bufput(ctx->ob, ctx->data + text_start_pos, text_size);
+		}
+	}
+
+	// Handle the HTML tag itself
+
+	size_t tag_size = (tag_end_pos - tag_start_pos);
+	if (tag_size) {
+		shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + tag_start_pos, tag_size,
+												SHL_RAW_HTML_TAG);
+		if (start_or_end_tag == END_TAG) { // If end-tag, add cursor before the tag
+			rndr_cursor_marker(ctx->ob, ctx->opaque, ctx->srcmap + tag_start_pos, tag_size, 0);
+		}
+		bufput(ctx->ob, ctx->data + tag_start_pos, tag_size);
+		if (start_or_end_tag == START_TAG) { // If start-tag, add cursor after the tag
+			rndr_cursor_marker(ctx->ob, ctx->opaque, ctx->srcmap + tag_start_pos, tag_size, tag_size - 1);
+		}
+	}
+}
+
 static void onEnteringPossibleTagOrComment(void *context)
 {
 	struct callback_ctx *ctx = context;
@@ -124,10 +171,7 @@ static void onIdentifyingStartOrSelfClosingTag(const char *tagName, void *contex
 	} else {
 		dom_append_raw_html_node(ctx->dom, dom_node);
 	}
-	shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + ctx->prev_tag_end_pos,
-											ctx->tag_start_pos - ctx->prev_tag_end_pos, SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
-	shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + ctx->tag_start_pos,
-											ctx->pos + 1 - ctx->tag_start_pos, SHL_RAW_HTML_TAG);
+	htmlTagIdentified(ctx, ctx->pos + 1, START_TAG);
 	ctx->is_within_tag_or_comment = 0;
 	ctx->prev_tag_end_pos = ctx->pos + 1;
 }
@@ -152,10 +196,7 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 			dom_append_raw_html_node(ctx->dom, dom_node);
 		}
 	}
-	shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + ctx->prev_tag_end_pos,
-											ctx->tag_start_pos - ctx->prev_tag_end_pos, SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
-	shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + ctx->tag_start_pos,
-											ctx->pos + 1 - ctx->tag_start_pos, SHL_RAW_HTML_TAG);
+	htmlTagIdentified(ctx, ctx->pos + 1, END_TAG);
 	ctx->is_within_tag_or_comment = 0;
 	ctx->prev_tag_end_pos = ctx->pos + 1;
 }
@@ -174,7 +215,7 @@ static void onIdentifyingAsNotATagOrComment(void *context)
 	ctx->is_within_tag_or_comment = 0;
 }
 
-void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl)
+void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl, void *opaque)
 {
 	struct htmlparser_ctx_s *parser = htmlparser_new();
 	struct callback_ctx callback_context;
@@ -184,8 +225,10 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 	callback_context.is_within_tag_or_comment = 0;
 	callback_context.stack_depth = 0;
 	callback_context.prev_tag_end_pos = 0;
+	callback_context.data = data;
 	callback_context.srcmap = srcmap;
 	callback_context.shl = shl;
+	callback_context.opaque = opaque;
 	parser->callback_context = &callback_context;
 	parser->on_enter_possible_tag_or_comment = &onEnteringPossibleTagOrComment;
 	parser->on_exit_start_tag = &onIdentifyingStartOrSelfClosingTag;
@@ -225,21 +268,16 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 		} else {
 			dom_append_raw_html_node(callback_context.dom, dom_node);
 		}
-		shl_apply_syntax_formatting_with_srcmap(shl, srcmap + callback_context.prev_tag_end_pos,
-												callback_context.tag_start_pos - callback_context.prev_tag_end_pos, SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
-		shl_apply_syntax_formatting_with_srcmap(shl, srcmap + callback_context.tag_start_pos,
-												size - callback_context.tag_start_pos, SHL_RAW_HTML_TAG);
+		htmlTagIdentified(&callback_context, size, END_TAG); // Incomplete tag
 		callback_context.is_within_tag_or_comment = 0;
 		callback_context.prev_tag_end_pos = size;
 	}
-	assert(callback_context.is_within_tag_or_comment == 0);
 
-	shl_apply_syntax_formatting_with_srcmap(shl, srcmap + callback_context.prev_tag_end_pos,
-											size - callback_context.prev_tag_end_pos, SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
+	assert(callback_context.is_within_tag_or_comment == 0);
+	callback_context.tag_start_pos = size;
+	htmlTagIdentified(&callback_context, size, END_TAG); // Trailing text, if any
 
 	if (callback_context.dom) {
 		buf_append_dom_node(ob, callback_context.dom);
 	}
-
-	bufput(ob, data, size);
 }
