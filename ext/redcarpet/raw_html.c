@@ -17,6 +17,7 @@
 #include "raw_html.h"
 #include "dom.h"
 #include "buffer.h"
+#include "shl.h"
 #include "streamhtmlparser/src/streamhtmlparser/htmlparser.h"
 #include <stdlib.h>
 #include <stddef.h>
@@ -27,12 +28,16 @@
 #define STACK_SIZE 32
 
 struct callback_ctx {
+	struct buf *ob;
 	struct dom_node *dom;
 	int is_within_tag_or_comment;
 	size_t base_offset;
 	size_t pos;
 	int is_pos_valid;
 	size_t tag_start_pos;
+	size_t prev_tag_end_pos;
+	srcmap_t *srcmap;
+	void *shl;
 
 	size_t stack[STACK_SIZE]; // offsets
 	unsigned int stack_depth;
@@ -119,7 +124,12 @@ static void onIdentifyingStartOrSelfClosingTag(const char *tagName, void *contex
 	} else {
 		dom_append_raw_html_node(ctx->dom, dom_node);
 	}
+	shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + ctx->prev_tag_end_pos,
+											ctx->tag_start_pos - ctx->prev_tag_end_pos, SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
+	shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + ctx->tag_start_pos,
+											ctx->pos + 1 - ctx->tag_start_pos, SHL_RAW_HTML_TAG);
 	ctx->is_within_tag_or_comment = 0;
+	ctx->prev_tag_end_pos = ctx->pos + 1;
 }
 
 static void onIdentifyingEndTag(const char *tagName, void *context)
@@ -142,13 +152,20 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 			dom_append_raw_html_node(ctx->dom, dom_node);
 		}
 	}
+	shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + ctx->prev_tag_end_pos,
+											ctx->tag_start_pos - ctx->prev_tag_end_pos, SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
+	shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + ctx->tag_start_pos,
+											ctx->pos + 1 - ctx->tag_start_pos, SHL_RAW_HTML_TAG);
 	ctx->is_within_tag_or_comment = 0;
+	ctx->prev_tag_end_pos = ctx->pos + 1;
 }
 
 static void onIdentifyingAsComment(void *context)
 {
 	struct callback_ctx *ctx = context;
 	ctx->is_within_tag_or_comment = 0;
+	ctx->prev_tag_end_pos = ctx->pos + 1;
+	// FIXME: Comments left unhandled
 }
 
 static void onIdentifyingAsNotATagOrComment(void *context)
@@ -157,14 +174,18 @@ static void onIdentifyingAsNotATagOrComment(void *context)
 	ctx->is_within_tag_or_comment = 0;
 }
 
-void add_raw_html(struct buf *ob, const char *data, size_t size)
+void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl)
 {
 	struct htmlparser_ctx_s *parser = htmlparser_new();
 	struct callback_ctx callback_context;
+	callback_context.ob = ob;
 	callback_context.dom = 0;
 	callback_context.base_offset = ob->size;
 	callback_context.is_within_tag_or_comment = 0;
 	callback_context.stack_depth = 0;
+	callback_context.prev_tag_end_pos = 0;
+	callback_context.srcmap = srcmap;
+	callback_context.shl = shl;
 	parser->callback_context = &callback_context;
 	parser->on_enter_possible_tag_or_comment = &onEnteringPossibleTagOrComment;
 	parser->on_exit_start_tag = &onIdentifyingStartOrSelfClosingTag;
@@ -204,7 +225,17 @@ void add_raw_html(struct buf *ob, const char *data, size_t size)
 		} else {
 			dom_append_raw_html_node(callback_context.dom, dom_node);
 		}
+		shl_apply_syntax_formatting_with_srcmap(shl, srcmap + callback_context.prev_tag_end_pos,
+												callback_context.tag_start_pos - callback_context.prev_tag_end_pos, SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
+		shl_apply_syntax_formatting_with_srcmap(shl, srcmap + callback_context.tag_start_pos,
+												size - callback_context.tag_start_pos, SHL_RAW_HTML_TAG);
+		callback_context.is_within_tag_or_comment = 0;
+		callback_context.prev_tag_end_pos = size;
 	}
+	assert(callback_context.is_within_tag_or_comment == 0);
+
+	shl_apply_syntax_formatting_with_srcmap(shl, srcmap + callback_context.prev_tag_end_pos,
+											size - callback_context.prev_tag_end_pos, SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
 
 	if (callback_context.dom) {
 		buf_append_dom_node(ob, callback_context.dom);

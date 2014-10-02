@@ -19,6 +19,6 @@
 
 #include "buffer.h"
 
-void add_raw_html(struct buf *ob, const char *data, size_t length);
+void add_raw_html(struct buf *ob, const char *data, size_t length, srcmap_t *srcmap, void *shl);
 
 #endif // __RAW_HTML_H

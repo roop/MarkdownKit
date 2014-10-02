@@ -551,7 +551,7 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque)
 }
 
 static void
-rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque)
+rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *srcmap, void *shl)
 {
 	size_t org, sz;
 	if (!text) return;
@@ -561,7 +561,7 @@ rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque)
 	while (org < sz && text->data[org] == '\n') org++;
 	if (org >= sz) return;
 	if (ob->size) bufputc(ob, '\n');
-	add_raw_html(ob, (const char *) text->data + org, sz - org);
+	add_raw_html(ob, (const char *) text->data + org, sz - org, srcmap + org, shl);
 	bufputc(ob, '\n');
 }
 

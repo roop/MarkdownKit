@@ -1745,7 +1745,7 @@ parse_blockquote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 }
 
 static size_t
-parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, int do_render);
+parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, int do_render, srcmap_t *srcmap);
 
 /* parse_blockquote • handles parsing of a regular paragraph */
 static size_t
@@ -1789,7 +1789,7 @@ parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 
 			/* see if an html block starts here */
 			if (data[i] == '<' && rndr->cb.blockhtml &&
-				parse_htmlblock(ob, rndr, data + i, size - i, 0)) {
+				parse_htmlblock(ob, rndr, data + i, size - i, 0, 0)) {
 				end = i;
 				break;
 			}
@@ -2273,7 +2273,7 @@ htmlblock_end(const char *curtag,
 
 /* parse_htmlblock • parsing of inline HTML block */
 static size_t
-parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, int do_render)
+parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, int do_render, srcmap_t *srcmap)
 {
 	size_t i, j = 0, tag_end;
 	const char *curtag = NULL;
@@ -2308,7 +2308,7 @@ parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 			if (j) {
 				work.size = i + j;
 				if (do_render && rndr->cb.blockhtml)
-					rndr->cb.blockhtml(ob, &work, rndr->opaque);
+					rndr->cb.blockhtml(ob, &work, rndr->opaque, srcmap, rndr->shl);
 				return work.size;
 			}
 		}
@@ -2325,7 +2325,7 @@ parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 				if (j) {
 					work.size = i + j;
 					if (do_render && rndr->cb.blockhtml)
-						rndr->cb.blockhtml(ob, &work, rndr->opaque);
+						rndr->cb.blockhtml(ob, &work, rndr->opaque, srcmap, rndr->shl);
 					return work.size;
 				}
 			}
@@ -2351,7 +2351,7 @@ parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 	/* the end of the block has been found */
 	work.size = tag_end;
 	if (do_render && rndr->cb.blockhtml)
-		rndr->cb.blockhtml(ob, &work, rndr->opaque);
+		rndr->cb.blockhtml(ob, &work, rndr->opaque, srcmap, rndr->shl);
 
 	return tag_end;
 }
@@ -2598,7 +2598,7 @@ parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			beg += parse_atxheader(ob, rndr, txt_data, end, txt_srcmap);
 
 		else if (data[beg] == '<' && rndr->cb.blockhtml &&
-				(i = parse_htmlblock(ob, rndr, txt_data, end, 1)) != 0)
+				(i = parse_htmlblock(ob, rndr, txt_data, end, 1, txt_srcmap)) != 0)
 			beg += i;
 
 		else if ((i = is_empty(txt_data, end)) != 0)
