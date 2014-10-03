@@ -19,6 +19,7 @@
 
 #include "markdown.h"
 #include "buffer.h"
+#include "cursor_marker.h"
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -40,7 +41,7 @@ struct html_renderopt {
 	/* extra data */
 	size_t cursor_pos; /* Editor cursor pos */
 	srcmap_t effective_cursor_pos; /* Effective editor cursor pos that matches the marker inserted in the HTML */
-	int is_cursor_marker_inserted; /* Non-zero if the cursor marker has been inserted into the HTML */
+	enum cursor_marker_status_t cursor_marker_status; /* Inout variable */
 };
 
 typedef enum {

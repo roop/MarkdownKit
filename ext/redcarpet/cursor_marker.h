@@ -19,9 +19,17 @@
 
 #include "buffer.h"
 
+enum cursor_marker_status_t {
+	CURSOR_MARKER_YET_TO_BE_INSERTED = 0,
+	CURSOR_MARKER_IS_INSERTED = 1,
+	CURSOR_MARKER_CANNOT_BE_INSERTED = 2,
+	CURSOR_MARKER_SHOULD_NOT_BE_INSERTED = 3
+};
+
 int index_of_cursor(void *opaque, srcmap_t *srcmap, size_t len, size_t *effective_cursor_pos_index);
 void rndr_cursor_marker(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t len,
                         size_t effective_cursor_pos_index);
+void set_cursor_marker_status(void *opaque, enum cursor_marker_status_t status);
 
 #endif // __CURSOR_MARKER_H
 

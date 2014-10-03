@@ -20,9 +20,9 @@
 int index_of_cursor(void *opaque, srcmap_t *srcmap, size_t len, size_t *effective_cursor_pos_index)
 {
 	struct html_renderopt *render_options = opaque;
-	int is_cursor_inserted = render_options->is_cursor_marker_inserted;
+	int should_insert_cursor_marker = (render_options->cursor_marker_status == CURSOR_MARKER_YET_TO_BE_INSERTED);
 	size_t cursor_pos = render_options->cursor_pos;
-	if (srcmap && !is_cursor_inserted) {
+	if (srcmap && should_insert_cursor_marker) {
 		while (len > 0 && srcmap[len - 1] < 0) len--;
 		if (len == 0) {
 			return -1;
@@ -46,12 +46,18 @@ void rndr_cursor_marker(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t l
                         size_t effective_cursor_pos_index)
 {
 	struct html_renderopt *render_options = opaque;
-	if (render_options->is_cursor_marker_inserted == 0) {
+	if (render_options->cursor_marker_status == CURSOR_MARKER_YET_TO_BE_INSERTED) {
 		while (len > 0 && srcmap[len - 1] < 0) len--;
 		if ((srcmap[0] <= render_options->cursor_pos) && (len > 0 && srcmap[len - 1] + 1 >= render_options->cursor_pos)) {
 			BUFPUTSL(ob, "<span id=\"__cursor_marker__\"></span>");
-			render_options->is_cursor_marker_inserted = 1;
+			render_options->cursor_marker_status = CURSOR_MARKER_IS_INSERTED;
 			render_options->effective_cursor_pos = srcmap[effective_cursor_pos_index];
 		}
 	}
+}
+
+void set_cursor_marker_status(void *opaque, enum cursor_marker_status_t status)
+{
+	struct html_renderopt *render_options = opaque;
+	render_options->cursor_marker_status = status;
 }
