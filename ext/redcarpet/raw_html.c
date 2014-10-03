@@ -32,7 +32,6 @@ struct callback_ctx {
 	struct buf *ob;
 	struct dom_node *dom;
 	int is_within_tag_or_comment;
-	size_t base_offset;
 	size_t pos;
 	int is_pos_valid;
 	size_t tag_start_pos;
@@ -99,7 +98,8 @@ static void dom_append_raw_html_node(struct dom_node *dom_tree, struct dom_node 
 #define START_TAG 1
 #define END_TAG 2
 
-static void htmlTagIdentified(struct callback_ctx *ctx, size_t tag_end_pos, int start_or_end_tag)
+static void htmlTagIdentified(const struct callback_ctx *ctx, size_t tag_end_pos, int start_or_end_tag,
+							  size_t *start_of_tag_in_ob, size_t *end_of_tag_in_ob)
 {
 	size_t text_start_pos = ctx->prev_tag_end_pos;
 	size_t tag_start_pos = ctx->tag_start_pos;
@@ -133,10 +133,15 @@ static void htmlTagIdentified(struct callback_ctx *ctx, size_t tag_end_pos, int 
 		if (start_or_end_tag == END_TAG) { // If end-tag, add cursor before the tag
 			rndr_cursor_marker(ctx->ob, ctx->opaque, ctx->srcmap + tag_start_pos, tag_size, 0);
 		}
+		(*start_of_tag_in_ob) = ctx->ob->size;
 		bufput(ctx->ob, ctx->data + tag_start_pos, tag_size);
+		(*end_of_tag_in_ob) = ctx->ob->size;
 		if (start_or_end_tag == START_TAG) { // If start-tag, add cursor after the tag
 			rndr_cursor_marker(ctx->ob, ctx->opaque, ctx->srcmap + tag_start_pos, tag_size, tag_size - 1);
 		}
+	} else {
+		(*start_of_tag_in_ob) = ctx->ob->size;
+		(*end_of_tag_in_ob) = ctx->ob->size;
 	}
 }
 
@@ -152,26 +157,32 @@ static void onIdentifyingStartOrSelfClosingTag(const char *tagName, void *contex
 {
 	struct callback_ctx *ctx = context;
 	assert(ctx->is_pos_valid);
-	size_t delta = ((ctx->stack_depth > 0) ? ctx->stack[ctx->stack_depth - 1] : 0);
-	size_t base_offset = ((ctx->stack_depth > 0) ? 0 : ctx->base_offset);
-	struct dom_node *dom_node = dom_new_node(newstr(tagName), base_offset + ctx->tag_start_pos - delta, 0);
-	dom_node->content_offset = base_offset + ctx->pos + 1 - delta;
+
+	size_t start_of_tag, end_of_tag;
+	htmlTagIdentified(ctx, ctx->pos + 1, START_TAG, &start_of_tag, &end_of_tag);
+
+	size_t end_of_containing_elem_tag = ((ctx->stack_depth > 0) ? ctx->stack[ctx->stack_depth - 1] : 0);
+	size_t eo = (start_of_tag - end_of_containing_elem_tag);
+	size_t co = (end_of_tag - end_of_containing_elem_tag);
+	struct dom_node *dom_node = dom_new_node(newstr(tagName), eo, 0);
 	if (isVoidHtmlElement(tagName)) {
 		dom_node->raw_html_element_type = CLOSED_RAW_HTML_ELEMENT;
 	} else {
 		dom_node->raw_html_element_type = UNCLOSED_RAW_HTML_ELEMENT;
+		dom_node->content_offset = co;
 		if (ctx->stack_depth < STACK_SIZE) {
-			ctx->stack[ctx->stack_depth] = ctx->pos + 1;
+			ctx->stack[ctx->stack_depth] = end_of_tag;
 			ctx->stack_depth++;
 		}
 		// FIXME: Handle the case when stack depth is exeeded
 	}
+
 	if (ctx->dom == 0) {
 		ctx->dom = dom_node;
 	} else {
 		dom_append_raw_html_node(ctx->dom, dom_node);
 	}
-	htmlTagIdentified(ctx, ctx->pos + 1, START_TAG);
+
 	ctx->is_within_tag_or_comment = 0;
 	ctx->prev_tag_end_pos = ctx->pos + 1;
 }
@@ -180,15 +191,21 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 {
 	struct callback_ctx *ctx = context;
 	assert(ctx->is_pos_valid);
-	size_t delta = ((ctx->stack_depth > 0) ? ctx->stack[ctx->stack_depth - 1] : 0);
+
+	size_t start_of_tag, end_of_tag;
+	htmlTagIdentified(ctx, ctx->pos + 1, END_TAG, &start_of_tag, &end_of_tag);
+
 	struct dom_node *open_raw_html_node = (ctx->dom ? dom_last_open_raw_html_node(ctx->dom) : 0);
 	if (open_raw_html_node && (strcasecmp(open_raw_html_node->html_tag_name, tagName) == 0)) {
+		assert(ctx->stack_depth > 0);
 		open_raw_html_node->raw_html_element_type = CLOSED_RAW_HTML_ELEMENT;
-		open_raw_html_node->content_length = ctx->tag_start_pos - delta;
-		open_raw_html_node->close_tag_length = ctx->pos + 1 - ctx->tag_start_pos;
+		open_raw_html_node->content_length = start_of_tag - ctx->stack[ctx->stack_depth - 1];
+		open_raw_html_node->close_tag_length = end_of_tag - start_of_tag;
 		ctx->stack_depth--;
 	} else {
-		struct dom_node *dom_node = dom_new_node(newstr(tagName), ctx->base_offset + ctx->tag_start_pos - delta, 0);
+		size_t end_of_containing_elem_tag = ((ctx->stack_depth > 0) ? ctx->stack[ctx->stack_depth - 1] : 0);
+		size_t eo = (start_of_tag - end_of_containing_elem_tag);
+		struct dom_node *dom_node = dom_new_node(newstr(tagName), eo, 0);
 		dom_node->raw_html_element_type = UNMATCHED_RAW_HTML_END_TAG;
 		if (ctx->dom == 0) {
 			ctx->dom = dom_node;
@@ -196,7 +213,7 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 			dom_append_raw_html_node(ctx->dom, dom_node);
 		}
 	}
-	htmlTagIdentified(ctx, ctx->pos + 1, END_TAG);
+
 	ctx->is_within_tag_or_comment = 0;
 	ctx->prev_tag_end_pos = ctx->pos + 1;
 }
@@ -221,7 +238,6 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 	struct callback_ctx callback_context;
 	callback_context.ob = ob;
 	callback_context.dom = 0;
-	callback_context.base_offset = ob->size;
 	callback_context.is_within_tag_or_comment = 0;
 	callback_context.stack_depth = 0;
 	callback_context.prev_tag_end_pos = 0;
@@ -268,14 +284,16 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 		} else {
 			dom_append_raw_html_node(callback_context.dom, dom_node);
 		}
-		htmlTagIdentified(&callback_context, size, END_TAG); // Incomplete tag
+		size_t start_of_tag, end_of_tag;
+		htmlTagIdentified(&callback_context, size, END_TAG, &start_of_tag, &end_of_tag); // Incomplete tag
 		callback_context.is_within_tag_or_comment = 0;
 		callback_context.prev_tag_end_pos = size;
 	}
 
 	assert(callback_context.is_within_tag_or_comment == 0);
 	callback_context.tag_start_pos = size;
-	htmlTagIdentified(&callback_context, size, END_TAG); // Trailing text, if any
+	size_t start_of_tag, end_of_tag;
+	htmlTagIdentified(&callback_context, size, END_TAG, &start_of_tag, &end_of_tag); // Trailing text, if any
 
 	if (callback_context.dom) {
 		buf_append_dom_node(ob, callback_context.dom);
