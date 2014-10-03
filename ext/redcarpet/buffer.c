@@ -307,19 +307,6 @@ void bufdebugdom(struct buf *buf)
 	dom_print(buf->dom, buf, 0, 0);
 }
 
-static void dom_release(struct dom_node *ast)
-{
-	if (!ast)
-		return;
-	dom_release(ast->children);
-	dom_release(ast->next);
-	if (ast->raw_html_element_type != NOT_RAW_HTML) {
-		// If raw html, the tag name is allocated (otherwise it's a static constant)
-		free((void *) ast->html_tag_name);
-	}
-	free(ast);
-}
-
 void bufreleaseast(struct buf *buf)
 {
 	if (!buf)

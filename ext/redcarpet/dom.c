@@ -54,3 +54,16 @@ struct dom_node* dom_last_open_raw_html_node(struct dom_node *dom_tree)
 	}
 	return 0;
 }
+
+void dom_release(struct dom_node *dom)
+{
+	if (!dom)
+		return;
+	dom_release(dom->children);
+	dom_release(dom->next);
+	if (dom->raw_html_element_type != NOT_RAW_HTML) {
+		// If raw html, the tag name is allocated (otherwise it's a static constant)
+		free((void *) dom->html_tag_name);
+	}
+	free(dom);
+}

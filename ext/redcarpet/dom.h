@@ -43,4 +43,6 @@ struct dom_node *dom_new_node(const char *html_tag_name, size_t elem_offset, str
 struct dom_node *dom_last_node(struct dom_node *node);
 struct dom_node* dom_last_open_raw_html_node(struct dom_node *dom_tree);
 
+void dom_release(struct dom_node *dom);
+
 #endif // __DOM_H
