@@ -23,8 +23,7 @@ enum raw_html_t {
 	NOT_RAW_HTML = 0,
 	CLOSED_RAW_HTML_ELEMENT = 1,
 	UNCLOSED_RAW_HTML_ELEMENT = 2,
-	UNMATCHED_RAW_HTML_END_TAG = 3,
-	MALFORMED_RAW_HTML_TAG = 4,
+	RAW_HTML_CHUNK = 3,
 };
 
 /* struct ast_node: Abstract Syntax Tree node */

@@ -41,6 +41,8 @@ struct callback_ctx {
 	void *shl;
 	void *opaque;
 
+	int potentially_invalid_html_found;
+
 	size_t stack[STACK_SIZE]; // offsets
 	unsigned int stack_depth;
 };
@@ -203,15 +205,7 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 		open_raw_html_node->close_tag_length = end_of_tag - start_of_tag;
 		ctx->stack_depth--;
 	} else {
-		size_t end_of_containing_elem_tag = ((ctx->stack_depth > 0) ? ctx->stack[ctx->stack_depth - 1] : 0);
-		size_t eo = (start_of_tag - end_of_containing_elem_tag);
-		struct dom_node *dom_node = dom_new_node(newstr(tagName), eo, 0);
-		dom_node->raw_html_element_type = UNMATCHED_RAW_HTML_END_TAG;
-		if (ctx->dom == 0) {
-			ctx->dom = dom_node;
-		} else {
-			dom_append_raw_html_node(ctx->dom, dom_node);
-		}
+		ctx->potentially_invalid_html_found = 1;
 	}
 
 	ctx->is_within_tag_or_comment = 0;
@@ -230,6 +224,7 @@ static void onIdentifyingAsNotATagOrComment(void *context)
 {
 	struct callback_ctx *ctx = context;
 	ctx->is_within_tag_or_comment = 0;
+	ctx->potentially_invalid_html_found = 1;
 }
 
 void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl, void *opaque)
@@ -245,6 +240,7 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 	callback_context.srcmap = srcmap;
 	callback_context.shl = shl;
 	callback_context.opaque = opaque;
+	callback_context.potentially_invalid_html_found = 0;
 	parser->callback_context = &callback_context;
 	parser->on_enter_possible_tag_or_comment = &onEnteringPossibleTagOrComment;
 	parser->on_exit_start_tag = &onIdentifyingStartOrSelfClosingTag;
@@ -253,6 +249,8 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 	parser->on_exit_comment = &onIdentifyingAsComment;
 	parser->on_cancel_possible_tag_or_comment = &onIdentifyingAsNotATagOrComment;
 	htmlparser_reset(parser);
+
+	size_t initial_ob_size = ob->size;
 
 	int i = 0, prev = 0;
 	for (i = 0; i < size; i++) {
@@ -266,36 +264,27 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 			htmlparser_parse(parser, data + i, 1);
 			prev = i + 1;
 			callback_context.is_pos_valid = 0;
+			if (callback_context.potentially_invalid_html_found) {
+				break;
+			}
 		}
-	}
-	if (prev < i) {
-		htmlparser_parse(parser, data + prev, (int) (size - prev));
 	}
 
 	htmlparser_delete(parser);
 
-	if (callback_context.is_within_tag_or_comment) {
-		// Redcarpet probably ended the HTML tag prematurely
-		// (Like on: `<tag attr=">" >`)
+	if (callback_context.potentially_invalid_html_found || // Potentially invalid HTML in block
+		callback_context.is_within_tag_or_comment ||       // Incomplete tag (E.g.: `<tag attr=">" >`)
+		(callback_context.prev_tag_end_pos < size)) {      // Trailing text (E.g.: `</tag> blah`
+		// It's not safe to trust the DOM we have generated from this HTML block.
+		// So let's discard it and treat the whole block as a single chunk.
 		struct dom_node *dom_node = dom_new_node(0, ob->size, 0);
-		dom_node->raw_html_element_type = MALFORMED_RAW_HTML_TAG;
-		if (callback_context.dom == 0) {
-			callback_context.dom = dom_node;
-		} else {
-			dom_append_raw_html_node(callback_context.dom, dom_node);
-		}
-		size_t start_of_tag, end_of_tag;
-		htmlTagIdentified(&callback_context, size, END_TAG, &start_of_tag, &end_of_tag); // Incomplete tag
-		callback_context.is_within_tag_or_comment = 0;
-		callback_context.prev_tag_end_pos = size;
-	}
-
-	assert(callback_context.is_within_tag_or_comment == 0);
-	callback_context.tag_start_pos = size;
-	size_t start_of_tag, end_of_tag;
-	htmlTagIdentified(&callback_context, size, END_TAG, &start_of_tag, &end_of_tag); // Trailing text, if any
-
-	if (callback_context.dom) {
+		dom_node->raw_html_element_type = RAW_HTML_CHUNK;
+		buf_append_dom_node(ob, dom_node);
+		dom_release(callback_context.dom);
+		ob->size = initial_ob_size;
+		bufput(ob, data, size);
+	} else if (callback_context.dom) {
+		// We have a good DOM
 		buf_append_dom_node(ob, callback_context.dom);
 	}
 }
