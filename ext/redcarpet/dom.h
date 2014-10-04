@@ -28,13 +28,18 @@ enum raw_html_t {
 
 /* struct ast_node: Abstract Syntax Tree node */
 struct dom_node {              // Assuming "<tag><subtag></subtag><p>blah</p></tag>"
+
 	const char *html_tag_name; // "p" for <p> tags
+
+	// Positions in the output HTML string
 	size_t elem_offset;        // invalid for raw_html // offset of "<p>blah</p>" in parent node's (i.e. "tag" 's) text
 	size_t close_tag_length;   // invalid for raw_html // length of "</p>"
 	size_t content_offset, content_length; // range of "blah" in parent node's (i.e. "tag" 's) text
+
+	// Additional data for raw HTML tags
 	enum raw_html_t raw_html_element_type;
-	// void *additional_data;     // Arbitrary additional data
 	size_t raw_html_tag_end;
+
 	struct dom_node *next;
 	struct dom_node *children;
 };
