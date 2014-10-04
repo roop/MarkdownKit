@@ -92,7 +92,7 @@ void bufdebugsm(struct buf *);
 
 /* Abstract Syntax Tree */
 void buf_append_dom_node(struct buf *, struct dom_node *);
-void bufreleaseast(struct buf *buf);
+void bufreleasedom(struct buf *buf);
 void bufdebugdom(struct buf *buf);
 
 #ifdef __cplusplus

@@ -307,7 +307,7 @@ void bufdebugdom(struct buf *buf)
 	dom_print(buf->dom, buf, 0, 0);
 }
 
-void bufreleaseast(struct buf *buf)
+void bufreleasedom(struct buf *buf)
 {
 	if (!buf)
 		return;
