@@ -42,9 +42,6 @@ struct callback_ctx {
 	void *opaque;
 
 	int potentially_invalid_html_found;
-
-	size_t stack[STACK_SIZE]; // offsets
-	unsigned int stack_depth;
 };
 
 static inline const char *newstr(const char *src)
@@ -163,7 +160,8 @@ static void onIdentifyingStartOrSelfClosingTag(const char *tagName, void *contex
 	size_t start_of_tag, end_of_tag;
 	htmlTagIdentified(ctx, ctx->pos + 1, START_TAG, &start_of_tag, &end_of_tag);
 
-	size_t end_of_containing_elem_tag = ((ctx->stack_depth > 0) ? ctx->stack[ctx->stack_depth - 1] : 0);
+	struct dom_node *open_raw_html_node = (ctx->dom ? dom_last_open_raw_html_node(ctx->dom) : 0);
+	size_t end_of_containing_elem_tag = (open_raw_html_node ? open_raw_html_node->raw_html_tag_end : 0);
 	size_t eo = (start_of_tag - end_of_containing_elem_tag);
 	size_t co = (end_of_tag - end_of_containing_elem_tag);
 	struct dom_node *dom_node = dom_new_node(newstr(tagName), eo, 0);
@@ -172,11 +170,7 @@ static void onIdentifyingStartOrSelfClosingTag(const char *tagName, void *contex
 	} else {
 		dom_node->raw_html_element_type = UNCLOSED_RAW_HTML_ELEMENT;
 		dom_node->content_offset = co;
-		if (ctx->stack_depth < STACK_SIZE) {
-			ctx->stack[ctx->stack_depth] = end_of_tag;
-			ctx->stack_depth++;
-		}
-		// FIXME: Handle the case when stack depth is exeeded
+		dom_node->raw_html_tag_end = end_of_tag;
 	}
 
 	if (ctx->dom == 0) {
@@ -199,11 +193,9 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 
 	struct dom_node *open_raw_html_node = (ctx->dom ? dom_last_open_raw_html_node(ctx->dom) : 0);
 	if (open_raw_html_node && (strcasecmp(open_raw_html_node->html_tag_name, tagName) == 0)) {
-		assert(ctx->stack_depth > 0);
 		open_raw_html_node->raw_html_element_type = CLOSED_RAW_HTML_ELEMENT;
-		open_raw_html_node->content_length = start_of_tag - ctx->stack[ctx->stack_depth - 1];
+		open_raw_html_node->content_length = start_of_tag - open_raw_html_node->raw_html_tag_end;
 		open_raw_html_node->close_tag_length = end_of_tag - start_of_tag;
-		ctx->stack_depth--;
 	} else {
 		ctx->potentially_invalid_html_found = 1;
 	}
@@ -227,14 +219,14 @@ static void onIdentifyingAsNotATagOrComment(void *context)
 	ctx->potentially_invalid_html_found = 1;
 }
 
-void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl, void *opaque)
+void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl, void *opaque,
+				  int block_or_tag)
 {
 	struct htmlparser_ctx_s *parser = htmlparser_new();
 	struct callback_ctx callback_context;
 	callback_context.ob = ob;
-	callback_context.dom = 0;
+	callback_context.dom = ((block_or_tag == INLINED_HTML_TAG)? ob->dom : 0);
 	callback_context.is_within_tag_or_comment = 0;
-	callback_context.stack_depth = 0;
 	callback_context.prev_tag_end_pos = 0;
 	callback_context.data = data;
 	callback_context.srcmap = srcmap;
@@ -277,14 +269,18 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 		(callback_context.prev_tag_end_pos < size)) {      // Trailing text (E.g.: `</tag> blah`
 		// It's not safe to trust the DOM we have generated from this HTML block.
 		// So let's discard it and treat the whole block as a single chunk.
+		ob->size = initial_ob_size;
 		struct dom_node *dom_node = dom_new_node(0, ob->size, 0);
 		dom_node->raw_html_element_type = RAW_HTML_CHUNK;
+		dom_node->content_offset = ob->size;
+		dom_node->content_length = size;
 		buf_append_dom_node(ob, dom_node);
 		dom_release(callback_context.dom);
-		ob->size = initial_ob_size;
 		bufput(ob, data, size);
 	} else if (callback_context.dom) {
 		// We have a good DOM
-		buf_append_dom_node(ob, callback_context.dom);
+		if (block_or_tag == BLOCK_OF_HTML || (block_or_tag == INLINED_HTML_TAG && ob->dom == 0)) {
+			buf_append_dom_node(ob, callback_context.dom);
+		}
 	}
 }

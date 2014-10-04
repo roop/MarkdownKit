@@ -34,6 +34,7 @@ struct dom_node {              // Assuming "<tag><subtag></subtag><p>blah</p></t
 	size_t content_offset, content_length; // range of "blah" in parent node's (i.e. "tag" 's) text
 	enum raw_html_t raw_html_element_type;
 	// void *additional_data;     // Arbitrary additional data
+	size_t raw_html_tag_end;
 	struct dom_node *next;
 	struct dom_node *children;
 };

@@ -19,6 +19,11 @@
 
 #include "buffer.h"
 
-void add_raw_html(struct buf *ob, const char *data, size_t length, srcmap_t *srcmap, void *shl, void *opaque);
+#define BLOCK_OF_HTML 1
+#define INLINED_HTML_TAG 2
+
+
+void add_raw_html(struct buf *ob, const char *data, size_t length, srcmap_t *srcmap, void *shl, void *opaque,
+				  int block_or_tag);
 
 #endif // __RAW_HTML_H

@@ -523,7 +523,7 @@ rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *s
 	while (org < sz && text->data[org] == '\n') org++;
 	if (org >= sz) return;
 	if (ob->size) bufputc(ob, '\n');
-	add_raw_html(ob, (const char *) text->data + org, sz - org, srcmap + org, shl, opaque);
+	add_raw_html(ob, (const char *) text->data + org, sz - org, srcmap + org, shl, opaque, BLOCK_OF_HTML);
 	bufputc(ob, '\n');
 }
 
@@ -598,7 +598,7 @@ rndr_raw_html(struct buf *ob, const struct buf *text, void *opaque, srcmap_t *sr
 		sdhtml_is_tag(text->data, text->size, "img"))
 		return 1;
 
-	add_raw_html(ob, (const char *) text->data, text->size, srcmap, shl, opaque);
+	add_raw_html(ob, (const char *) text->data, text->size, srcmap, shl, opaque, INLINED_HTML_TAG);
 
 	return 1;
 }
