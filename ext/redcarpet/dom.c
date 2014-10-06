@@ -96,19 +96,27 @@ static void print_in_one_line(const char *str, size_t len)
 
 void dom_print(struct dom_node *dom_node, struct buf *buf, int depth, size_t offset)
 {
-	if (dom_node == 0 || buf == 0) {
+	if (dom_node == 0) {
 		return;
 	}
-	printf("%*s tag: [%s] contents: \"", depth * 2, "", dom_node->html_tag_name);
+	printf("%*s tag: [%s]", depth * 2, "", dom_node->html_tag_name);
+	if (buf) {
 #ifdef USE_CONTENT_OFFSET
-	size_t dom_offset = dom_node->content_offset;
-	size_t dom_length = dom_node->content_length;
+		printf(" content: \"");
+		size_t dom_offset = dom_node->content_offset;
+		size_t dom_length = dom_node->content_length;
 #else
-	size_t dom_offset = dom_node->elem_offset;
-	size_t dom_length = dom_node->content_offset + dom_node->content_length + dom_node->close_tag_length - dom_offset;
+		printf(" element: \"");
+		size_t dom_offset = dom_node->elem_offset;
+		size_t dom_length = dom_node->content_offset + dom_node->content_length + dom_node->close_tag_length - dom_offset;
 #endif
-	print_in_one_line((const char *) buf->data + offset + dom_offset, dom_length);
-	printf("\"%s\n", (dom_node->raw_html_element_type > 1? " BAD RAW HTML" : ""));
+		print_in_one_line((const char *) buf->data + offset + dom_offset, dom_length);
+		printf("\"");
+	}
+	if (dom_node->raw_html_element_type) {
+		printf(" (raw-html: %s)", (dom_node->raw_html_element_type == 1? "closed" : (dom_node->raw_html_element_type == 2? "unclosed" : "chunk")));
+	}
+	printf("\n");
 	dom_print(dom_node->children, buf, depth + 1, offset + dom_node->content_offset);
 	dom_print(dom_node->next, buf, depth, offset);
 }
