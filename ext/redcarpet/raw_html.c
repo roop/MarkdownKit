@@ -28,9 +28,20 @@
 
 #define STACK_SIZE 32
 
+void add_raw_html_tag(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl, void *opaque)
+{
+	shl_apply_syntax_formatting_with_srcmap(shl, srcmap, size, SHL_RAW_HTML_TAG);
+	struct dom_node *dom_node = dom_new_node(0, ob->size, 0);
+	dom_node->raw_html_element_type = RAW_HTML_TAG;
+	dom_node->content_offset = ob->size;
+	buf_append_dom_node(ob, dom_node);
+	bufput(ob, data, size);
+}
+
 struct callback_ctx {
 	struct buf *ob;
 	struct dom_node *dom;
+	int is_raw_html_block;
 	int is_within_tag_or_comment;
 	size_t pos;
 	int is_pos_valid;
@@ -193,6 +204,7 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 
 	struct dom_node *open_raw_html_node = (ctx->dom ? dom_last_open_raw_html_node(ctx->dom) : 0);
 	if (open_raw_html_node && (strcasecmp(open_raw_html_node->html_tag_name, tagName) == 0)) {
+		assert(open_raw_html_node->raw_html_element_type == UNCLOSED_RAW_HTML_ELEMENT);
 		open_raw_html_node->raw_html_element_type = CLOSED_RAW_HTML_ELEMENT;
 		open_raw_html_node->content_length = start_of_tag - open_raw_html_node->raw_html_tag_end;
 		open_raw_html_node->close_tag_length = end_of_tag - start_of_tag;
@@ -219,13 +231,12 @@ static void onIdentifyingAsNotATagOrComment(void *context)
 	ctx->potentially_invalid_html_found = 1;
 }
 
-void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl, void *opaque,
-				  int block_or_tag)
+void add_raw_html_block(struct buf *ob, const char *data, size_t size, srcmap_t *srcmap, void *shl, void *opaque)
 {
 	struct htmlparser_ctx_s *parser = htmlparser_new();
 	struct callback_ctx callback_context;
 	callback_context.ob = ob;
-	callback_context.dom = ((block_or_tag == INLINED_HTML_TAG)? ob->dom : 0);
+	callback_context.dom = 0;
 	callback_context.is_within_tag_or_comment = 0;
 	callback_context.prev_tag_end_pos = 0;
 	callback_context.data = data;
@@ -265,22 +276,20 @@ void add_raw_html(struct buf *ob, const char *data, size_t size, srcmap_t *srcma
 	htmlparser_delete(parser);
 
 	if (callback_context.potentially_invalid_html_found || // Potentially invalid HTML in block
-		callback_context.is_within_tag_or_comment ||       // Incomplete tag (E.g.: `<tag attr=">" >`)
-		(callback_context.prev_tag_end_pos < size)) {      // Trailing text (E.g.: `</tag> blah`
+		callback_context.is_within_tag_or_comment       || // Incomplete tag (E.g.: `<tag attr=">" >`)
+		(callback_context.prev_tag_end_pos < size)) {      // Trailing text (E.g.: `</tag> blah`)
 		// It's not safe to trust the DOM we have generated from this HTML block.
 		// So let's discard it and treat the whole block as a single chunk.
-		ob->size = initial_ob_size;
+		dom_release(callback_context.dom); // Discard the DOM tree we've built
+		ob->size = initial_ob_size; // Remove any text added to ob
 		struct dom_node *dom_node = dom_new_node(0, ob->size, 0);
-		dom_node->raw_html_element_type = RAW_HTML_CHUNK;
+		dom_node->raw_html_element_type = RAW_HTML_BLOCK;
 		dom_node->content_offset = ob->size;
 		dom_node->content_length = size;
-		buf_append_dom_node(ob, dom_node);
-		dom_release(callback_context.dom);
-		bufput(ob, data, size);
+		buf_append_dom_node(ob, dom_node); // Add chunk node as DOM tree
+		bufput(ob, data, size); // Write the text as-is to ob
 	} else if (callback_context.dom) {
 		// We have a good DOM
-		if (block_or_tag == BLOCK_OF_HTML || (block_or_tag == INLINED_HTML_TAG && ob->dom == 0)) {
-			buf_append_dom_node(ob, callback_context.dom);
-		}
+		buf_append_dom_node(ob, callback_context.dom);
 	}
 }

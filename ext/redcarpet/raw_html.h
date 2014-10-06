@@ -22,8 +22,8 @@
 #define BLOCK_OF_HTML 1
 #define INLINED_HTML_TAG 2
 
+void add_raw_html_tag(struct buf *ob, const char *data, size_t length, srcmap_t *srcmap, void *shl, void *opaque);
 
-void add_raw_html(struct buf *ob, const char *data, size_t length, srcmap_t *srcmap, void *shl, void *opaque,
-				  int block_or_tag);
+void add_raw_html_block(struct buf *ob, const char *data, size_t length, srcmap_t *srcmap, void *shl, void *opaque);
 
 #endif // __RAW_HTML_H
