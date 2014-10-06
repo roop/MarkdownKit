@@ -49,5 +49,6 @@ struct dom_node *dom_last_node(struct dom_node *node);
 struct dom_node* dom_last_open_raw_html_node(struct dom_node *dom_tree);
 
 void dom_release(struct dom_node *dom);
+void dom_print(struct dom_node *dom_node, struct buf *buf, int depth, size_t offset);
 
 #endif // __DOM_H

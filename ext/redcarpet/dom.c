@@ -15,8 +15,10 @@
  */
 
 #include "dom.h"
+#include "buffer.h"
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdio.h>
 
 struct dom_node *dom_new_node(const char *html_tag_name, size_t elem_offset, struct dom_node *child)
 {
@@ -66,4 +68,47 @@ void dom_release(struct dom_node *dom)
 		free((void *) dom->html_tag_name);
 	}
 	free(dom);
+}
+
+
+static void print_in_one_line(const char *str, size_t len)
+{
+	if (len == 0) {
+		return;
+	}
+	int is_ellipsis_printed = 0;
+	for (int i = 0; i < len; i++) {
+		if (i < 10 || (len - i) < 10) {
+			char c = str[i];
+			if (c == '\n') {
+				printf("\\n");
+			} else {
+				printf("%c", str[i]);
+			}
+		} else if (!is_ellipsis_printed) {
+			printf(" ... ");
+			is_ellipsis_printed = 1;
+		}
+	}
+}
+
+#define USE_CONTENT_OFFSET
+
+void dom_print(struct dom_node *dom_node, struct buf *buf, int depth, size_t offset)
+{
+	if (dom_node == 0 || buf == 0) {
+		return;
+	}
+	printf("%*s tag: [%s] contents: \"", depth * 2, "", dom_node->html_tag_name);
+#ifdef USE_CONTENT_OFFSET
+	size_t dom_offset = dom_node->content_offset;
+	size_t dom_length = dom_node->content_length;
+#else
+	size_t dom_offset = dom_node->elem_offset;
+	size_t dom_length = dom_node->content_offset + dom_node->content_length + dom_node->close_tag_length - dom_offset;
+#endif
+	print_in_one_line((const char *) buf->data + offset + dom_offset, dom_length);
+	printf("\"%s\n", (dom_node->raw_html_element_type > 1? " BAD RAW HTML" : ""));
+	dom_print(dom_node->children, buf, depth + 1, offset + dom_node->content_offset);
+	dom_print(dom_node->next, buf, depth, offset);
 }
