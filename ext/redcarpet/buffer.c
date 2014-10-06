@@ -260,7 +260,7 @@ void buf_append_dom_node(struct buf *buf, struct dom_node *node)
 	}
 }
 
-void bufdebugdom(struct buf *buf)
+void bufdebugdom(const struct buf *buf)
 {
 	dom_print(buf->dom, buf, 0, 0);
 }

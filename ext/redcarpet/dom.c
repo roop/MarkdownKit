@@ -94,7 +94,7 @@ static void print_in_one_line(const char *str, size_t len)
 
 #define USE_CONTENT_OFFSET
 
-void dom_print(struct dom_node *dom_node, struct buf *buf, int depth, size_t offset)
+void dom_print(const struct dom_node *dom_node, const struct buf *buf, int depth, size_t offset)
 {
 	if (dom_node == 0) {
 		return;
