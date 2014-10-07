@@ -92,6 +92,18 @@ static void print_in_one_line(const char *str, size_t len)
 	}
 }
 
+static const char *raw_html_type_string(enum raw_html_t raw_html_element_type)
+{
+	switch (raw_html_element_type) {
+		case CLOSED_RAW_HTML_ELEMENT: return "closed-tag";
+		case UNCLOSED_RAW_HTML_ELEMENT: return "unclosed-tag";
+		case RAW_HTML_BLOCK: return "raw-html-block";
+		case RAW_HTML_TAG: return "raw-html-tag";
+		default: return "unknown-type";
+	}
+	return "unknown-type";
+}
+
 #define USE_CONTENT_OFFSET
 
 void dom_print(const struct dom_node *dom_node, const struct buf *buf, int depth, size_t offset)
@@ -114,7 +126,7 @@ void dom_print(const struct dom_node *dom_node, const struct buf *buf, int depth
 		printf("\"");
 	}
 	if (dom_node->raw_html_element_type) {
-		printf(" (raw-html: %s)", (dom_node->raw_html_element_type == 1? "closed" : (dom_node->raw_html_element_type == 2? "unclosed" : "chunk")));
+		printf(" (raw-html: %s)", raw_html_type_string(dom_node->raw_html_element_type));
 	}
 	printf("\n");
 	dom_print(dom_node->children, buf, depth + 1, offset + dom_node->content_offset);
