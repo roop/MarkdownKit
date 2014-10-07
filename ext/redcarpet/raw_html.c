@@ -36,6 +36,7 @@ void add_raw_html_tag(struct buf *ob, const char *data, size_t size, srcmap_t *s
 	dom_node->content_offset = ob->size;
 	buf_append_dom_node(ob, dom_node);
 	bufput(ob, data, size);
+	ob->dom->ambiguous_html_state = CONTAINING_AMBIGUOUS_HTML;
 }
 
 struct callback_ctx {
@@ -286,10 +287,14 @@ void add_raw_html_block(struct buf *ob, const char *data, size_t size, srcmap_t 
 		dom_node->raw_html_element_type = RAW_HTML_BLOCK;
 		dom_node->content_offset = ob->size;
 		dom_node->content_length = size;
+		dom_node->ambiguous_html_state = CONTAINING_AMBIGUOUS_HTML;
 		buf_append_dom_node(ob, dom_node); // Add chunk node as DOM tree
 		bufput(ob, data, size); // Write the text as-is to ob
 	} else if (callback_context.dom) {
 		// We have a good DOM
+		if (dom_last_open_raw_html_node(callback_context.dom)) {
+			callback_context.dom->ambiguous_html_state = CONTAINING_AMBIGUOUS_HTML;
+		}
 		buf_append_dom_node(ob, callback_context.dom);
 	}
 }

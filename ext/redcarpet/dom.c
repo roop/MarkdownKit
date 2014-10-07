@@ -31,6 +31,11 @@ struct dom_node *dom_new_node(const char *html_tag_name, size_t elem_offset, str
 	dom_node->raw_html_element_type = NOT_RAW_HTML;
 	dom_node->next = 0;
 	dom_node->children = child;
+	if (child && child->ambiguous_html_state) {
+		dom_node->ambiguous_html_state = CONTAINING_AMBIGUOUS_HTML;
+	} else {
+		dom_node->ambiguous_html_state = NO_AMBIGUOUS_HTML;
+	}
 	return dom_node;
 }
 
@@ -127,6 +132,9 @@ void dom_print(const struct dom_node *dom_node, const struct buf *buf, int depth
 	}
 	if (dom_node->raw_html_element_type) {
 		printf(" (raw-html: %s)", raw_html_type_string(dom_node->raw_html_element_type));
+	}
+	if (dom_node->ambiguous_html_state) {
+		printf(" (%s ambiguous html)", (dom_node->ambiguous_html_state == CONTAINING_AMBIGUOUS_HTML? "containing" : "followed by"));
 	}
 	printf("\n");
 	dom_print(dom_node->children, buf, depth + 1, offset + dom_node->content_offset);

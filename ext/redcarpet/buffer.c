@@ -257,6 +257,9 @@ void buf_append_dom_node(struct buf *buf, struct dom_node *node)
 		buf->dom = node;
 	} else {
 		dom_last_node(buf->dom)->next = node;
+		if (node->ambiguous_html_state) {
+			buf->dom->ambiguous_html_state = FOLLOWED_BY_AMBIGUOUS_HTML;
+		}
 	}
 }
 

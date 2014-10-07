@@ -27,6 +27,12 @@ enum raw_html_t {
 	RAW_HTML_TAG = 4
 };
 
+enum ambiguous_html_state_t {
+	NO_AMBIGUOUS_HTML = 0,
+	CONTAINING_AMBIGUOUS_HTML = 1,
+	FOLLOWED_BY_AMBIGUOUS_HTML = 2
+};
+
 /* struct ast_node: Abstract Syntax Tree node */
 struct dom_node {              // Assuming "<tag><subtag></subtag><p>blah</p></tag>"
 
@@ -40,6 +46,7 @@ struct dom_node {              // Assuming "<tag><subtag></subtag><p>blah</p></t
 	// Additional data for raw HTML tags
 	enum raw_html_t raw_html_element_type;
 	size_t raw_html_tag_end;
+	enum ambiguous_html_state_t ambiguous_html_state;
 
 	struct dom_node *next;
 	struct dom_node *children;
