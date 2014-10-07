@@ -30,12 +30,16 @@ int index_of_cursor(void *opaque, srcmap_t *srcmap, size_t len, size_t *effectiv
 		if ((srcmap[0] <= cursor_pos) && (srcmap[len - 1] >= cursor_pos)) {
 			for (int i = 0; i < len; i++) {
 				if (srcmap[i] >= 0 && srcmap[i] >= cursor_pos) {
-					(*effective_cursor_pos_index) = i;
+					if (effective_cursor_pos_index) {
+						(*effective_cursor_pos_index) = i;
+					}
 					return i;
 				}
 			}
 		} else if (srcmap[len - 1] + 1 == cursor_pos) {
-			(*effective_cursor_pos_index) = len - 1;
+			if (effective_cursor_pos_index) {
+				(*effective_cursor_pos_index) = len - 1;
+			}
 			return (int) len;
 		}
 	}
