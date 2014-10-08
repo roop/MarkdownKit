@@ -60,6 +60,16 @@ void rndr_cursor_marker(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t l
 	}
 }
 
+int8_t is_cursor_in_range(void *opaque, srcmap_t *srcmap, size_t len)
+{
+	struct html_renderopt *render_options = opaque;
+	while (len > 0 && srcmap[len - 1] < 0) len--;
+	if ((srcmap[0] <= render_options->cursor_pos) && (len > 0 && srcmap[len - 1] + 1 >= render_options->cursor_pos)) {
+		return 1;
+	}
+	return 0;
+}
+
 void set_cursor_marker_status(void *opaque, enum cursor_marker_status_t status)
 {
 	struct html_renderopt *render_options = opaque;

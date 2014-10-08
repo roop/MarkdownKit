@@ -37,7 +37,7 @@ void add_raw_html_tag(struct buf *ob, const char *data, size_t size, srcmap_t *s
 	buf_append_dom_node(ob, dom_node);
 	bufput(ob, data, size);
 	ob->dom->ambiguous_html_state = CONTAINING_AMBIGUOUS_HTML;
-	if (index_of_cursor(opaque, srcmap, size, 0) >= 0) {
+	if (is_cursor_in_range(opaque, srcmap, size)) {
 		// If cursor is inside the html tag
 		set_cursor_marker_status(opaque, CURSOR_MARKER_CANNOT_BE_INSERTED);
 	}
@@ -294,7 +294,7 @@ void add_raw_html_block(struct buf *ob, const char *data, size_t size, srcmap_t 
 		dom_node->ambiguous_html_state = CONTAINING_AMBIGUOUS_HTML;
 		buf_append_dom_node(ob, dom_node); // Add chunk node as DOM tree
 		bufput(ob, data, size); // Write the text as-is to ob
-		if (index_of_cursor(opaque, srcmap, size, 0) >= 0) {
+		if (is_cursor_in_range(opaque, srcmap, size)) {
 			// If cursor is inside the raw html block
 			set_cursor_marker_status(opaque, CURSOR_MARKER_CANNOT_BE_INSERTED);
 		}
