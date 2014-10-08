@@ -28,7 +28,7 @@ enum cursor_marker_status_t {
 
 int index_of_cursor(void *opaque, srcmap_t *srcmap, size_t len, size_t *effective_cursor_pos_index);
 void rndr_cursor_marker(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t len,
-                        size_t effective_cursor_pos_index);
+						size_t effective_cursor_pos_index);
 int8_t is_cursor_in_range(void *opaque, srcmap_t *srcmap, size_t len);
 void set_cursor_marker_status(void *opaque, enum cursor_marker_status_t status);
 

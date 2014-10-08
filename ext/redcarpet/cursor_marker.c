@@ -47,7 +47,7 @@ int index_of_cursor(void *opaque, srcmap_t *srcmap, size_t len, size_t *effectiv
 }
 
 void rndr_cursor_marker(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t len,
-                        size_t effective_cursor_pos_index)
+						size_t effective_cursor_pos_index)
 {
 	struct html_renderopt *render_options = opaque;
 	if (render_options->cursor_marker_status == CURSOR_MARKER_YET_TO_BE_INSERTED) {
