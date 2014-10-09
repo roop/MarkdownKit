@@ -557,6 +557,7 @@ rndr_hrule(struct buf *ob, void *opaque)
 {
 	struct html_renderopt *options = opaque;
 	if (ob->size) bufputc(ob, '\n');
+	buf_append_dom_node(ob, dom_new_node("hr", ob->size, 0));
 	bufputs(ob, USE_XHTML(options) ? "<hr/>\n" : "<hr>\n");
 }
 
