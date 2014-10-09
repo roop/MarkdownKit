@@ -91,6 +91,8 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 		type != MKDA_EMAIL)
 		return 0;
 
+	struct dom_node *dom_node = dom_new_node("a", ob->size, 0);
+
 	BUFPUTSL(ob, "<a href=\"");
 	if (type == MKDA_EMAIL)
 		BUFPUTSL(ob, "mailto:");
@@ -104,6 +106,8 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 		BUFPUTSL(ob, "\">");
 	}
 
+	dom_node->content_offset = ob->size;
+
 	/*
 	 * Pretty printing: if we get an email address as
 	 * an actual URI, e.g. `mailto:foo@bar.com`, we don't
@@ -115,9 +119,13 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 		escape_html(ob, link->data, link->size);
 	}
 
-	BUFPUTSL(ob, "</a>");
-
 	rndr_cursor_marker(ob, opaque, srcmap, link->size, link->size - 1);
+
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 4;
+	buf_append_dom_node(ob, dom_node);
+
+	BUFPUTSL(ob, "</a>");
 
 	return 1;
 }
