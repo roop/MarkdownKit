@@ -379,9 +379,6 @@ rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque,
 		bufprintf(ob, "<h%d>", level);
 
 	dom_node->content_offset = ob->size;
-	dom_node->content_length = (text? text->size : 0);
-	dom_node->close_tag_length = 5;
-	buf_append_dom_node(ob, dom_node);
 
 	// If cursor is in leading ###s, add marker before the header content
 	rndr_cursor_marker(ob, opaque, srcmap, srcmap_content_offset, srcmap_content_offset - 1);
@@ -389,6 +386,10 @@ rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque,
 	// If cursor is in trailing ###s or ===s, add marker after the header content
 	rndr_cursor_marker(ob, opaque, srcmap + srcmap_content_offset + srcmap_content_len,
 					   srcmap_len - srcmap_content_offset - srcmap_content_len, 0);
+
+	dom_node->content_length = ob->size - dom_node->content_offset;
+	dom_node->close_tag_length = 5;
+	buf_append_dom_node(ob, dom_node);
 
 	bufprintf(ob, "</h%d>\n", level);
 }
