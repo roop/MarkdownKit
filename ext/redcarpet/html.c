@@ -567,6 +567,8 @@ rndr_image(struct buf *ob, const struct buf *link, const struct buf *title, cons
 	struct html_renderopt *options = opaque;
 	if (!link || !link->size) return 0;
 
+	buf_append_dom_node(ob, dom_new_node("img", ob->size, 0));
+
 	BUFPUTSL(ob, "<img src=\"");
 	escape_href(ob, link->data, link->size);
 	BUFPUTSL(ob, "\" alt=\"");
