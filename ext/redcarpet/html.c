@@ -763,6 +763,8 @@ rndr_footnotes(struct buf *ob, const struct buf *text, void *opaque)
 
 	if (ob->size) bufputc(ob, '\n');
 
+	buf_append_dom_node(ob, dom_new_node("div", ob->size, 0)); // No need to get inside this div
+
 	BUFPUTSL(ob, "<div class=\"footnotes\">\n");
 	bufputs(ob, USE_XHTML(options) ? "<hr/>\n" : "<hr>\n");
 	BUFPUTSL(ob, "<ol>\n");
@@ -801,11 +803,13 @@ rndr_footnote_def(struct buf *ob, const struct buf *text, unsigned int num, void
 		bufput(ob, text->data, text->size);
 	}
 	BUFPUTSL(ob, "</li>\n");
+	// This need not be DOM-ed because the top-level div containing this list is DOM-ed
 }
 
 static int
 rndr_footnote_ref(struct buf *ob, unsigned int num, void *opaque)
 {
+	buf_append_dom_node(ob, dom_new_node("sup", ob->size, 0));
 	bufprintf(ob, "<sup id=\"fnref%d\"><a href=\"#fn%d\" rel=\"footnote\">%d</a></sup>", num, num, num);
 	return 1;
 }
