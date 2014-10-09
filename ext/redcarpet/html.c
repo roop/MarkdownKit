@@ -349,6 +349,7 @@ static int
 rndr_linebreak(struct buf *ob, void *opaque)
 {
 	struct html_renderopt *options = opaque;
+	buf_append_dom_node(ob, dom_new_node("br", ob->size, 0));
 	bufputs(ob, USE_XHTML(options) ? "<br/>\n" : "<br>\n");
 	return 1;
 }
