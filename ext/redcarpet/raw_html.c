@@ -113,6 +113,7 @@ static void dom_append_raw_html_node(struct dom_node *dom_tree, struct dom_node 
 enum html_tag_type_t {
 	HTML_START_TAG,
 	HTML_END_TAG,
+	HTML_COMMENT
 };
 
 static void htmlTagIdentified(const struct callback_ctx *ctx, size_t tag_end_pos, enum html_tag_type_t tag_type,
@@ -146,8 +147,8 @@ static void htmlTagIdentified(const struct callback_ctx *ctx, size_t tag_end_pos
 	size_t tag_size = (tag_end_pos - tag_start_pos);
 	if (tag_size) {
 		shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + tag_start_pos, tag_size,
-												SHL_RAW_HTML_TAG);
-		if (tag_type == HTML_END_TAG) { // If end-tag, add cursor before the tag
+												((tag_type == HTML_COMMENT)? SHL_RAW_HTML_COMMENT : SHL_RAW_HTML_TAG));
+		if (tag_type == HTML_END_TAG || tag_type == HTML_COMMENT) { // If end-tag, add cursor before the tag
 			rndr_cursor_marker(ctx->ob, ctx->opaque, ctx->srcmap + tag_start_pos, tag_size, 0);
 		}
 		(*start_of_tag_in_ob) = ctx->ob->size;
@@ -226,9 +227,13 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 static void onIdentifyingAsComment(void *context)
 {
 	struct callback_ctx *ctx = context;
+
+	// Add comment text to ob; no need to add to the DOM
+	size_t start_of_tag, end_of_tag;
+	htmlTagIdentified(ctx, ctx->pos + 1, HTML_COMMENT, &start_of_tag, &end_of_tag);
+
 	ctx->is_within_tag_or_comment = 0;
 	ctx->prev_tag_end_pos = ctx->pos + 1;
-	// FIXME: Comments left unhandled
 }
 
 static void onIdentifyingAsNotATagOrComment(void *context)
