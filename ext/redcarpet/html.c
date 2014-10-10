@@ -356,6 +356,7 @@ rndr_linebreak(struct buf *ob, void *opaque)
 
 char *header_anchor(struct buf *text)
 {
+    assert(0); // We don't use redcarpet in TOC mode, so we'll never call this function
     return "";
 	// VALUE str = rb_str_new2(bufcstr(text));
 	// VALUE space_regex = rb_reg_new(" +", 2 /* length */, 0);
