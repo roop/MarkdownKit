@@ -2165,7 +2165,7 @@ parse_footnote_def(struct buf *ob, struct sd_markdown *rndr, unsigned int num, u
 	struct buf *work = 0;
 	work = rndr_newbuf(rndr, BUFFER_SPAN);
 
-	parse_block(work, rndr, data, size, 0); // FIXME: srcmap
+	parse_block(work, rndr, data, size, 0);
 
 	if (rndr->cb.footnote_def)
 	rndr->cb.footnote_def(ob, work, num, rndr->opaque);
