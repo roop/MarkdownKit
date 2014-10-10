@@ -292,6 +292,12 @@ void add_raw_html_block(struct buf *ob, const char *data, size_t size, srcmap_t 
 		(callback_context.prev_tag_end_pos < size)) {      // Trailing text (E.g.: `</tag> blah`)
 		// It's not safe to trust the DOM we have generated from this HTML block.
 		// So let's discard it and treat the whole block as a single chunk.
+		if (callback_context.prev_tag_end_pos < size) {
+			// Mark unidentified stuff as text content
+			shl_apply_syntax_formatting_with_srcmap(shl, srcmap + callback_context.prev_tag_end_pos,
+													(size - callback_context.prev_tag_end_pos),
+													SHL_RAW_HTML_BLOCK_TEXT_CONTENT);
+		}
 		dom_release(callback_context.dom); // Discard the DOM tree we've built
 		ob->size = initial_ob_size; // Remove any text added to ob
 		struct dom_node *dom_node = dom_new_node(0, ob->size, 0);
