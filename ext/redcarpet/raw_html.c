@@ -110,10 +110,12 @@ static void dom_append_raw_html_node(struct dom_node *dom_tree, struct dom_node 
 	}
 }
 
-#define START_TAG 1
-#define END_TAG 2
+enum html_tag_type_t {
+	HTML_START_TAG,
+	HTML_END_TAG,
+};
 
-static void htmlTagIdentified(const struct callback_ctx *ctx, size_t tag_end_pos, int start_or_end_tag,
+static void htmlTagIdentified(const struct callback_ctx *ctx, size_t tag_end_pos, enum html_tag_type_t tag_type,
 							  size_t *start_of_tag_in_ob, size_t *end_of_tag_in_ob)
 {
 	size_t text_start_pos = ctx->prev_tag_end_pos;
@@ -145,13 +147,13 @@ static void htmlTagIdentified(const struct callback_ctx *ctx, size_t tag_end_pos
 	if (tag_size) {
 		shl_apply_syntax_formatting_with_srcmap(ctx->shl, ctx->srcmap + tag_start_pos, tag_size,
 												SHL_RAW_HTML_TAG);
-		if (start_or_end_tag == END_TAG) { // If end-tag, add cursor before the tag
+		if (tag_type == HTML_END_TAG) { // If end-tag, add cursor before the tag
 			rndr_cursor_marker(ctx->ob, ctx->opaque, ctx->srcmap + tag_start_pos, tag_size, 0);
 		}
 		(*start_of_tag_in_ob) = ctx->ob->size;
 		bufput(ctx->ob, ctx->data + tag_start_pos, tag_size);
 		(*end_of_tag_in_ob) = ctx->ob->size;
-		if (start_or_end_tag == START_TAG) { // If start-tag, add cursor after the tag
+		if (tag_type == HTML_START_TAG) { // If start-tag, add cursor after the tag
 			rndr_cursor_marker(ctx->ob, ctx->opaque, ctx->srcmap + tag_start_pos, tag_size, tag_size - 1);
 		}
 	} else {
@@ -174,7 +176,7 @@ static void onIdentifyingStartOrSelfClosingTag(const char *tagName, void *contex
 	assert(ctx->is_pos_valid);
 
 	size_t start_of_tag, end_of_tag;
-	htmlTagIdentified(ctx, ctx->pos + 1, START_TAG, &start_of_tag, &end_of_tag);
+	htmlTagIdentified(ctx, ctx->pos + 1, HTML_START_TAG, &start_of_tag, &end_of_tag);
 
 	struct dom_node *open_raw_html_node = (ctx->dom ? dom_last_open_raw_html_node(ctx->dom) : 0);
 	size_t end_of_containing_elem_tag = (open_raw_html_node ? open_raw_html_node->raw_html_tag_end : 0);
@@ -205,7 +207,7 @@ static void onIdentifyingEndTag(const char *tagName, void *context)
 	assert(ctx->is_pos_valid);
 
 	size_t start_of_tag, end_of_tag;
-	htmlTagIdentified(ctx, ctx->pos + 1, END_TAG, &start_of_tag, &end_of_tag);
+	htmlTagIdentified(ctx, ctx->pos + 1, HTML_END_TAG, &start_of_tag, &end_of_tag);
 
 	struct dom_node *open_raw_html_node = (ctx->dom ? dom_last_open_raw_html_node(ctx->dom) : 0);
 	if (open_raw_html_node && (strcasecmp(open_raw_html_node->html_tag_name, tagName) == 0)) {
