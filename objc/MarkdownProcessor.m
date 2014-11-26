@@ -7,6 +7,7 @@
 //
 
 #import "MarkdownProcessor.h"
+#import "SyntaxHighlightArbiter.h"
 #include "markdown.h"
 #include "html.h"
 #include "buffer.h"
@@ -15,6 +16,7 @@
 #define BUFFER_GROW_SIZE 1024
 
 @interface MarkdownProcessor () {
+    SyntaxHighlightArbiter *_syntaxHighlightArbiter;
     BOOL _isLivePreviewUpdatePending;
     NSInteger _effectiveEditorCursorPos;
     struct buf *_prev_ob, *_cur_ob;
@@ -32,6 +34,7 @@
 {
     self = [super init];
     if (self) {
+        _syntaxHighlightArbiter = [SyntaxHighlightArbiter new];
         _isLivePreviewUpdatePending = NO;
         _effectiveEditorCursorPos = -1;
         _prev_ob = 0;
@@ -66,6 +69,12 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, U
 {
     assert(position >= 0);
 
+    if (!self.syntaxHighlighter) {
+        self.syntaxHighlighter = [SyntaxHighlighter new];
+    }
+    _syntaxHighlightArbiter.syntaxHighlighter = self.syntaxHighlighter;
+    _syntaxHighlightArbiter.attributedText = self.textStorage;
+
     struct sd_callbacks callbacks;
     struct html_renderopt options;
     struct sd_markdown *markdown;
@@ -88,7 +97,7 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, U
                                   MKDEXT_LAX_SPACING |
                                   MKDEXT_TABLES
                                   );
-    markdown = sd_markdown_new(md_extensions, 16, &callbacks, &options, (__bridge void *) self.syntaxHighlightDelegate);
+    markdown = sd_markdown_new(md_extensions, 16, &callbacks, &options, (__bridge void *) _syntaxHighlightArbiter);
 
     sd_markdown_render(ob, ib->data, ib->size, markdown); // Would make calls on the syntaxHighlightDelegate internally
     sd_markdown_free(markdown);

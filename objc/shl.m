@@ -9,20 +9,29 @@
 #import <UIKit/UIKit.h>
 #include "shl.h"
 #include "MarkdownProcessor.h"
+#include "SyntaxHighlightArbiter.h"
 
-void shl_apply_syntax_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t length, shl_syntax_formatting_t kind)
+static void shl_apply_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t length, uint16_t fmt, bool isTextFormatting)
 {
     if (shl == 0 || srcmap == 0 || length == 0)
         return;
     assert((int)length >= 0);
-    NSObject<SyntaxHighlightDelegate> *shlDelegate = (__bridge NSObject<SyntaxHighlightDelegate> *) shl;
+    struct SyntaxHighlightData shlData;
+    if (isTextFormatting) {
+        shlData.markupFormatting = 0;
+        shlData.textFormatting = fmt;
+    } else {
+        shlData.markupFormatting = fmt;
+        shlData.textFormatting = 0;
+    }
+    SyntaxHighlightArbiter *shlArbiter = (__bridge SyntaxHighlightArbiter *) shl;
     size_t pos = *srcmap;
     int i = 1, n = 0;
     for (i = 1; i < length; i++) {
         if (srcmap[i] != (pos + i - n)) {
             if (srcmap[i - 1] >= 0) {
                 // This range can be mapped to the source
-                [shlDelegate setSyntaxFormatting:kind InRange:NSMakeRange(pos, i - n)];
+                [shlArbiter ensureTextRange:NSMakeRange(pos, i - n) isSyntaxHighlightedWithData:shlData];
             }
             pos = srcmap[i];
             n = i;
@@ -30,38 +39,29 @@ void shl_apply_syntax_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t
     }
     if (srcmap[length - 1] >= 0) {
         // This range can be mapped to the source
-        [shlDelegate setSyntaxFormatting:kind InRange:NSMakeRange(pos, i - n)];
+        [shlArbiter ensureTextRange:NSMakeRange(pos, i - n) isSyntaxHighlightedWithData:shlData];
     }
+}
+
+void shl_apply_syntax_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t length, shl_syntax_formatting_t kind)
+{
+    assert(sizeof(kind) == sizeof(uint16_t));
+    shl_apply_formatting_with_srcmap(shl, srcmap, length, kind, /* isTextFormatting */ false);
 }
 
 void shl_apply_text_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t length, shl_text_formatting_t kind)
 {
-    if (shl == 0 || srcmap == 0 || length == 0)
-        return;
-    assert((int)length >= 0);
-    NSObject<SyntaxHighlightDelegate> *shlDelegate = (__bridge NSObject<SyntaxHighlightDelegate> *) shl;
-    size_t pos = *srcmap;
-    int i = 1, n = 0;
-    for (i = 1; i < length; i++) {
-        if (srcmap[i] != (pos + i - n)) {
-            if (srcmap[i - 1] >= 0) {
-                // This range can be mapped to the source
-                [shlDelegate setTextFormatting:kind InRange:NSMakeRange(pos, i - n)];
-            }
-            pos = srcmap[i];
-            n = i;
-        }
-    }
-    if (srcmap[length - 1] >= 0) {
-        // This range can be mapped to the source
-        [shlDelegate setTextFormatting:kind InRange:NSMakeRange(pos, i - n)];
-    }
+    assert(sizeof(kind) == sizeof(uint16_t));
+    shl_apply_formatting_with_srcmap(shl, srcmap, length, kind, /* isTextFormatting */ true);
 }
 
 void shl_apply_syntax_formatting_with_range(void *shl, size_t pos, size_t length, shl_syntax_formatting_t kind)
 {
     if (shl == 0 || length == 0)
         return;
-    NSObject<SyntaxHighlightDelegate> *shlDelegate = (__bridge NSObject<SyntaxHighlightDelegate> *) shl;
-    [shlDelegate setSyntaxFormatting:kind InRange:NSMakeRange(pos, length)];
+    struct SyntaxHighlightData shlData;
+    shlData.markupFormatting = kind;
+    shlData.textFormatting = 0;
+    SyntaxHighlightArbiter *shlArbiter = (__bridge SyntaxHighlightArbiter *) shl;
+    [shlArbiter ensureTextRange:NSMakeRange(pos, length) isSyntaxHighlightedWithData:shlData];
 }

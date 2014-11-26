@@ -86,6 +86,11 @@ enum {
 	SHL_RAW_HTML_COMMENT,
 };
 
+struct SyntaxHighlightData {
+    shl_syntax_formatting_t markupFormatting; // If markupFormatting is 0, this is text content, not markup
+    shl_text_formatting_t textFormatting; // If both are 0, then this is unformatted text content
+};
+
 void shl_apply_text_formatting_with_srcmap(void *shl_data, srcmap_t* srcmap, size_t length, shl_text_formatting_t kind);
 
 void shl_apply_syntax_formatting_with_srcmap(void *shl_data, srcmap_t* srcmap, size_t length, shl_syntax_formatting_t kind);

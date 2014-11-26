@@ -10,25 +10,17 @@
 #import <UIKit/UIKit.h>
 
 #import "shl.h"
-
+#import "SyntaxHighlighter.h"
 
 @protocol LivePreviewDelegate;
 @protocol SyntaxHighlightDelegate;
 
-
 @interface MarkdownProcessor : NSObject<NSTextStorageDelegate>
 
-@property (nonatomic, weak) id<SyntaxHighlightDelegate> syntaxHighlightDelegate;
+@property (nonatomic, strong) SyntaxHighlighter* syntaxHighlighter;
+@property (nonatomic, weak) NSTextStorage* textStorage;
 @property (nonatomic, weak) id<LivePreviewDelegate> livePreviewDelegate;
 @property (nonatomic, weak) UITextView *textEditor;
-
-@end
-
-
-@protocol SyntaxHighlightDelegate <NSObject>
-
-- (void) setSyntaxFormatting:(shl_syntax_formatting_t)kind InRange: (NSRange)range;
-- (void) setTextFormatting:(shl_text_formatting_t)kind InRange: (NSRange)range;
 
 @end
 

@@ -7,10 +7,20 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "MarkdownProcessor.h"
+#import "shl.h"
 
-@interface SyntaxHighlighter : NSObject<SyntaxHighlightDelegate>
+@interface SyntaxHighlighter : NSObject
 
-@property (nonatomic, weak) NSTextStorage *textStorage;
+@property (nonatomic, strong) UIFont *defaultFont;
+
+// This is the entry-point method
+- (void) applySyntaxHighlight:(struct SyntaxHighlightData)shlData inText:(NSMutableAttributedString *)str range:(NSRange)range;
+
+// The following are meant to be overridden in subclasses, as required
+- (void) applyMarkupFormatting:(shl_syntax_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range;
+- (void) applyTextFormatting:(shl_text_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range;
+- (void) applyFontAttributesUsingTextFormatting:(shl_text_formatting_t)fmt
+										 inText:(NSMutableAttributedString *)str range:(NSRange)range
+							 existingAttributes:(NSDictionary *)attributes;
 
 @end

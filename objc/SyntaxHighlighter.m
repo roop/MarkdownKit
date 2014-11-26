@@ -31,82 +31,77 @@
 #pragma mark - SyntaxHighlightDelegate
 
 static UIFontDescriptorSymbolicTraits typefaceTraitsForTextFormatting(shl_text_formatting_t fmt);
-static UIFontDescriptorSymbolicTraits typefaceTraitsUsedForTextFormatting();
 
-- (void) setSyntaxFormatting:(shl_syntax_formatting_t)fmt InRange: (NSRange)range
+- (void) applySyntaxHighlight:(struct SyntaxHighlightData)shlData inText:(NSMutableAttributedString *)str range:(NSRange)range
 {
-    __block UIColor *requiredFgColor = nil;
-    [_textStorage
-     enumerateAttributesInRange:range
-     options:NSAttributedStringEnumerationLongestEffectiveRangeNotRequired
-     usingBlock:^(NSDictionary *attrs, NSRange range, BOOL *stop) {
-         UIFont *font = attrs[NSFontAttributeName];
-         if (font) {
-             UIFontDescriptor *fontDescriptor = [font fontDescriptor];
-             UIFontDescriptorSymbolicTraits traits = [fontDescriptor symbolicTraits];
-             UIFontDescriptorSymbolicTraits typefaceTraits = (traits & typefaceTraitsUsedForTextFormatting());
-             if (typefaceTraits) {
-                 UIFontDescriptorSymbolicTraits noTypefaceTraits = (traits ^ typefaceTraits);
-                 UIFont *overrideFont = [UIFont fontWithDescriptor:[fontDescriptor fontDescriptorWithSymbolicTraits:noTypefaceTraits] size:[font pointSize]];
-                 [_textStorage addAttribute:NSFontAttributeName value:overrideFont range:range];
-             }
-         }
-         UIColor *bgColor = attrs[NSBackgroundColorAttributeName];
-         if (bgColor) {
-             [_textStorage removeAttribute:NSBackgroundColorAttributeName range:range];
-         }
-         UIColor *fgColor = attrs[NSForegroundColorAttributeName];
-         if (fgColor) {
-             if (requiredFgColor == nil) {
-                 requiredFgColor = [self foregroundColorForSyntaxFormatting:fmt];
-             }
-             if (![fgColor isEqual:requiredFgColor]) {
-                 [_textStorage addAttribute:NSForegroundColorAttributeName value:requiredFgColor range:range];
-             }
-         } else {
-             if (requiredFgColor == nil) {
-                 requiredFgColor = [self foregroundColorForSyntaxFormatting:fmt];
-             }
-             [_textStorage addAttribute:NSForegroundColorAttributeName value:requiredFgColor range:range];
-         }
-     }];
+    if (shlData.markupFormatting > 0) {
+        // Markup
+        [self applyMarkupFormatting:shlData.markupFormatting inText:str range:range];
+    } else {
+        // Text
+        [self applyTextFormatting:shlData.textFormatting inText:str range:range];
+    }
+}
+
+- (void) applyMarkupFormatting:(shl_syntax_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range
+{
+    // Apply default font (to remove bold, italics, etc., if present)
+    if (self.defaultFont) {
+        [str addAttribute:NSFontAttributeName value:self.defaultFont range:range];
+    }
+
+    // Remove background color
+    [str removeAttribute:NSBackgroundColorAttributeName range:range];
+
+    // Add foreground color, if applicable
+    [str addAttribute:NSForegroundColorAttributeName
+                value:[self foregroundColorForSyntaxFormatting:fmt]
+                range:range];
 }
 
 static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSString *attrName,
                                                       shl_text_formatting_t fmt_match,
-                                                      NSTextStorage *textStorage, shl_text_formatting_t fmt, NSRange range);
+                                                      NSMutableAttributedString *textStorage, shl_text_formatting_t fmt, NSRange range);
 static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
                                      shl_text_formatting_t fmt_match, UIColor *color,
-                                     NSTextStorage *textStorage, shl_text_formatting_t fmt, NSRange range);
+                                     NSMutableAttributedString *textStorage, shl_text_formatting_t fmt, NSRange range);
 
-- (void) setTextFormatting:(shl_text_formatting_t)fmt InRange: (NSRange)range
+- (void) applyTextFormatting:(shl_text_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range
 {
-    [_textStorage
+    [str
      enumerateAttributesInRange:range
      options:NSAttributedStringEnumerationLongestEffectiveRangeNotRequired
-     usingBlock:^(NSDictionary *attrs, NSRange range, BOOL *stop) {
-         UIFont *font = attrs[NSFontAttributeName];
-         if (font) {
-             // Make sure font typeface traits match what we want (like bold, italics, etc.)
-             UIFontDescriptor *fontDescriptor = [font fontDescriptor];
-             UIFontDescriptorSymbolicTraits traits = [fontDescriptor symbolicTraits];
-             UIFontDescriptorSymbolicTraits typefaceTraits = (traits & typefaceTraitsUsedForTextFormatting());
-             UIFontDescriptorSymbolicTraits reqdTypefaceTraits = typefaceTraitsForTextFormatting(fmt);
-             if (typefaceTraits != reqdTypefaceTraits) {
-                 UIFont *overrideFont = [UIFont fontWithDescriptor:[fontDescriptor fontDescriptorWithSymbolicTraits:reqdTypefaceTraits] size:[font pointSize]];
-                 [_textStorage addAttribute:NSFontAttributeName value:overrideFont range:range];
-             }
-         }
-         applyTextFormattingUnderlineStrikethrough(attrs, NSUnderlineStyleAttributeName, SHL_UNDERLINE_CONTENT,
-                                                   _textStorage, fmt, range);
-         applyTextFormattingUnderlineStrikethrough(attrs, NSStrikethroughStyleAttributeName, SHL_STRIKETHROUGH_CONTENT,
-                                                   _textStorage, fmt, range);
-         applyTextFormattingColor(attrs, NSForegroundColorAttributeName, SHL_LINKED_CONTENT, [UIColor blueColor],
-                                  _textStorage, fmt, range);
+     usingBlock:^(NSDictionary *attributes, NSRange range, BOOL *stop) {
 
-         applyTextFormattingColor(attrs, NSBackgroundColorAttributeName, SHL_CODE_SPAN_CONTENT, [self veryLightGrayColor],
-                                  _textStorage, fmt, range);
+         // Font
+         [self applyFontAttributesUsingTextFormatting:fmt inText:str range:range existingAttributes:attributes];
+
+         // Underline
+         applyTextFormattingUnderlineStrikethrough(attributes,
+                                                   NSUnderlineStyleAttributeName, SHL_UNDERLINE_CONTENT,
+                                                   str, fmt, range);
+         // Strikethrough
+         applyTextFormattingUnderlineStrikethrough(attributes,
+                                                   NSUnderlineStyleAttributeName, SHL_UNDERLINE_CONTENT,
+                                                   str, fmt, range);
+         // Foreground Color
+         applyTextFormattingColor(attributes,
+                                  NSForegroundColorAttributeName, SHL_LINKED_CONTENT, [UIColor blueColor],
+                                  str, fmt, range);
+         // Background Color
+         applyTextFormattingColor(attributes,
+                                  NSBackgroundColorAttributeName, SHL_CODE_SPAN_CONTENT, [self veryLightGrayColor],
+                                  str, fmt, range);
      }];
+}
+
+- (void) applyFontAttributesUsingTextFormatting:(shl_text_formatting_t)fmt
+                                         inText:(NSMutableAttributedString *)str range:(NSRange)range
+                             existingAttributes:(NSDictionary *)attributes {
+    UIFontDescriptorSymbolicTraits reqdTypefaceTraits = typefaceTraitsForTextFormatting(fmt);
+    UIFontDescriptor *fontDescriptor = [self.defaultFont.fontDescriptor fontDescriptorWithSymbolicTraits:reqdTypefaceTraits];
+    UIFont *font = [UIFont fontWithDescriptor:fontDescriptor size:self.defaultFont.pointSize];
+    [str addAttribute:NSFontAttributeName value:font range:range];
 }
 
 #pragma mark - char attributes for syntax constructs
@@ -171,7 +166,7 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
 
 static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSString *attrName,
                                                       shl_text_formatting_t fmt_match,
-                                                      NSTextStorage *textStorage, shl_text_formatting_t fmt, NSRange range)
+                                                      NSMutableAttributedString *textStorage, shl_text_formatting_t fmt, NSRange range)
 {
     BOOL isPresent = ([attrs[attrName] integerValue] != NSUnderlineStyleNone);
     BOOL shouldBePresent = ((fmt & fmt_match) == fmt_match);
@@ -187,7 +182,7 @@ static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSStr
 
 static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
                                      shl_text_formatting_t fmt_match, UIColor *color,
-                                     NSTextStorage *textStorage, shl_text_formatting_t fmt, NSRange range)
+                                     NSMutableAttributedString *textStorage, shl_text_formatting_t fmt, NSRange range)
 {
     UIColor *existingColor = attrs[attrName];
     UIColor *requiredColor = ((fmt & fmt_match) == fmt_match) ? color : nil;
@@ -218,9 +213,4 @@ static UIFontDescriptorSymbolicTraits typefaceTraitsForTextFormatting(shl_text_f
         typefaceTraits |= UIFontDescriptorTraitBold;
     }
     return typefaceTraits;
-}
-
-static UIFontDescriptorSymbolicTraits typefaceTraitsUsedForTextFormatting()
-{
-    return (UIFontDescriptorTraitItalic | UIFontDescriptorTraitBold);
 }
