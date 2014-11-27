@@ -103,6 +103,29 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, U
     sd_markdown_free(markdown);
     bufrelease(ib);
 
+    if (_prev_ob == 0) {
+        NSString *html = [[NSString alloc] initWithBytes:ob->data length:ob->size encoding:NSUTF8StringEncoding];
+        NSString *preHtml = @""
+        "<html>"
+        "<head>"
+        "<meta name=\"viewport\" content=\"initial-scale=1.0, maximum-scale=1.0, user-scalable=no\" />"
+        "<style>%s</style>"
+        "<script>"
+        "function topOfCursorMarker() {"
+        "    return (document.getElementById(\"__cursor_marker__\").getClientRects()[0]).top;"
+        "}"
+        "</script>"
+        "</head>"
+        "<body style=\"font-size: 16;\">";
+        NSString *postHtml = @""
+        "</body>"
+        "</html>";
+        NSString *full = [preHtml stringByAppendingFormat:@"%@%@", html, postHtml];
+        [_livePreviewDelegate loadHTMLAfterInsertingCSS:full];
+        _prev_ob = ob;
+        return;
+    }
+
     NSTimeInterval delay = 0.0;
     if (_isLivePreviewUpdatePending) {
         // Drop any queued previous live-preview updates.

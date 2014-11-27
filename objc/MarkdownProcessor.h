@@ -27,6 +27,7 @@
 
 @protocol LivePreviewDelegate <NSObject>
 
+- (void)loadHTMLAfterInsertingCSS:(NSString *)html; // html includes a '%s' to insert CSS
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler;
 - (void)scrollVerticallyBy:(CGFloat)yDiff;
 
