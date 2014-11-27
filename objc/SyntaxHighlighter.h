@@ -20,7 +20,7 @@
 - (void) applyMarkupFormatting:(shl_syntax_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range;
 - (void) applyTextFormatting:(shl_text_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range;
 - (void) applyFontAttributesUsingTextFormatting:(shl_text_formatting_t)fmt
-										 inText:(NSMutableAttributedString *)str range:(NSRange)range
-							 existingAttributes:(NSDictionary *)attributes;
+                                         inText:(NSMutableAttributedString *)str range:(NSRange)range
+                             existingAttributes:(NSDictionary *)attributes;
 
 @end
