@@ -175,7 +175,9 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, U
     }];
 }
 
-struct dom_node *locateDOMNode(struct dom_node *ast, size_t location, size_t len, size_t offset, struct buf *traversal)
+struct dom_node *locateDOMNode(struct dom_node *from_ast, struct dom_node *ast,
+                               size_t location, size_t len, size_t offset,
+                               struct buf *traversal, size_t *cumulative_content_offset)
 {
     if (ast == 0) {
         return 0;
@@ -185,24 +187,34 @@ struct dom_node *locateDOMNode(struct dom_node *ast, size_t location, size_t len
         // Can't be sure how WkWebView's DOM would look like past this node.
         return 0;
     }
+    if (from_ast == 0 || ast == 0) {
+        return 0;
+    }
+    if (from_ast->content_offset != ast->content_offset) {
+        return 0;
+    }
     size_t co = offset + ast->content_offset;
-    size_t cl = ast->content_length;
+    size_t to_cl = ast->content_length;
+    size_t from_cl = from_ast->content_length;
+    size_t cl = (from_cl < to_cl)? from_cl : to_cl;
     if (location >= co) {
         if ((location + len) <= (co + cl)) {
             // check children
             size_t sz = traversal->size;
             bufputc(traversal, 'C');
-            struct dom_node *node = locateDOMNode(ast->children, location, len, co, traversal);
+            struct dom_node *node = locateDOMNode(from_ast->children, ast->children, location, len, co,
+                                                  traversal, cumulative_content_offset);
             if (node) {
                 return node;
             }
             traversal->size = sz;
-            ast->content_offset = co; // Ugly hack
+            (*cumulative_content_offset) = co;
             return ast;
         } else {
             // check next
             bufputc(traversal, 'N');
-            return locateDOMNode(ast->next, location, len, offset, traversal);
+            return locateDOMNode(from_ast->next, ast->next, location, len, offset,
+                                 traversal, cumulative_content_offset);
         }
     }
     return 0;
@@ -215,6 +227,7 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
 
     struct buf *traversal_info = 0;
     struct dom_node *dom_node = 0;
+    size_t cumulative_content_offset = 0;
 
     if (fromHtml) {
         size_t len = fromHtml->size;
@@ -249,7 +262,8 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
 
         if (!applyOnDocumentBody) {
             traversal_info = bufnew(16);
-            dom_node = locateDOMNode(toHtml->dom, common_prefix_length, diff_len, 0, traversal_info);
+            dom_node = locateDOMNode(fromHtml->dom, toHtml->dom, common_prefix_length, diff_len, 0,
+                                     traversal_info, &cumulative_content_offset);
         }
     }
 
@@ -287,7 +301,7 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
     size_t content_offset;
     size_t content_length;
     if (dom_node) {
-        content_offset = dom_node->content_offset;
+        content_offset = cumulative_content_offset;
         content_length = dom_node->content_length;
     } else {
         content_offset = 0;
