@@ -20,7 +20,6 @@
 @property (nonatomic, strong) SyntaxHighlighter* syntaxHighlighter;
 @property (nonatomic, weak) NSTextStorage* textStorage;
 @property (nonatomic, weak) id<LivePreviewDelegate> livePreviewDelegate;
-@property (nonatomic, weak) UITextView *textEditor;
 
 - (void) processMarkdown:(NSString *) text withCursorPosition: (NSUInteger) position;
 
@@ -32,5 +31,9 @@
 - (void)loadHTMLAfterInsertingCSS:(NSString *)html; // html includes a '%s' to insert CSS
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler;
 - (void)scrollVerticallyBy:(CGFloat)yDiff;
+
+- (CGFloat)topOfCaretAtEditorCursorPosition:(NSInteger)cursorPosition;
+- (CGFloat)editorTextAreaHeight;
+- (CGFloat)editorLineHeight;
 
 @end

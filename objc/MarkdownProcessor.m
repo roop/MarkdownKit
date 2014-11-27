@@ -135,7 +135,7 @@ enum JavascriptCodeError {
 
 static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *toHtml, BOOL applyOnDocumentBody);
 void updateHtml(NSString *javascriptCode, id<LivePreviewDelegate> livePreviewDelegate, UITextView *textEditor, NSInteger effectiveCursorPos);
-void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, UITextView *textEditor, NSInteger effectiveCursorPos);
+void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, NSInteger effectiveCursorPos);
 
 - (void) updateLivePreview
 {
@@ -176,7 +176,7 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, U
             }];
         } else {
             if (_effectiveEditorCursorPos >= 0) {
-                scrollLivePreviewToEditPoint(_livePreviewDelegate, _textEditor, _effectiveEditorCursorPos);
+                scrollLivePreviewToEditPoint(_livePreviewDelegate, _effectiveEditorCursorPos);
             }
             bufreleasedom(_prev_ob);
             bufrelease(_prev_ob);
@@ -356,7 +356,7 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
     return js;
 }
 
-void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, UITextView *textEditor, NSInteger effectiveCursorPos)
+void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, NSInteger effectiveCursorPos)
 {
     [livePreviewDelegate evaluateJavaScript:@"topOfCursorMarker()" completionHandler:^(id result, NSError *error) {
         if (error) {
@@ -365,20 +365,18 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, U
         }
         NSNumber *topOfCursorMarker = result;
         CGFloat previewCursorY = topOfCursorMarker.floatValue;
-        CGRect caretRect = [textEditor caretRectForPosition:
-                            [textEditor positionFromPosition:[textEditor beginningOfDocument]
-                                                      offset:effectiveCursorPos]];
-        CGFloat editorCursorY = caretRect.origin.y - textEditor.contentOffset.y;
-        CGFloat editorHeight = textEditor.bounds.size.height - textEditor.contentInset.top - textEditor.contentInset.bottom;
+        CGFloat editorCursorY = [livePreviewDelegate topOfCaretAtEditorCursorPosition:effectiveCursorPos];
+        CGFloat editorHeight = [livePreviewDelegate editorTextAreaHeight];
+        CGFloat editorLineHeight = [livePreviewDelegate editorLineHeight];
         if (editorCursorY < 0) { // Editor will auto-scroll-down
             editorCursorY = 0;
         } else if (editorCursorY > editorHeight) { // Editor will auto-scroll-up
-            editorCursorY = editorHeight - textEditor.font.lineHeight;
+            editorCursorY = editorHeight - editorLineHeight;
         }
         CGFloat yDiff = (editorCursorY - previewCursorY);
         if ((previewCursorY < 0) ||
-            (previewCursorY > (editorHeight - textEditor.font.lineHeight)) || // FIXME: Assuming preview is same height as editor
-            (abs(yDiff) > (textEditor.font.lineHeight * 4))) {
+            (previewCursorY > (editorHeight - editorLineHeight)) || // FIXME: Assuming preview is same height as editor
+            (abs(yDiff) > (editorLineHeight * 4))) {
             [livePreviewDelegate scrollVerticallyBy:yDiff];
         }
     }];
