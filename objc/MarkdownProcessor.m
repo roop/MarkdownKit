@@ -43,28 +43,6 @@
     return self;
 }
 
-#pragma mark - NSTextStorageDelegate
-
-- (void)textStorage:(NSTextStorage *)textStorage willProcessEditing:(NSTextStorageEditActions)editedMask range:(NSRange)editedRange changeInLength:(NSInteger)delta
-{
-    if ((editedMask & NSTextStorageEditedCharacters) == NSTextStorageEditedCharacters) {
-        // When text content changes, process it as Markdown
-        [self processMarkdown:textStorage.string withCursorPosition:((NSUInteger) (editedRange.location + editedRange.length))];
-    }
-}
-
-#pragma mark - Internal methods
-
-enum JavascriptCodeError {
-    NO_ERROR = 0,
-    ERROR_SETTING_INNERHTML = 1,
-    ERROR_LOCATING_DOM_NODE = 2
-};
-
-static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *toHtml, BOOL applyOnDocumentBody);
-void updateHtml(NSString *javascriptCode, id<LivePreviewDelegate> livePreviewDelegate, UITextView *textEditor, NSInteger effectiveCursorPos);
-void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, UITextView *textEditor, NSInteger effectiveCursorPos);
-
 - (void) processMarkdown:(NSString *) text withCursorPosition: (NSUInteger) position
 {
     assert(position >= 0);
@@ -146,6 +124,18 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, U
 
     [self performSelector:@selector(updateLivePreview) withObject:nil afterDelay:delay];
 }
+
+#pragma mark - Internal methods
+
+enum JavascriptCodeError {
+    NO_ERROR = 0,
+    ERROR_SETTING_INNERHTML = 1,
+    ERROR_LOCATING_DOM_NODE = 2
+};
+
+static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *toHtml, BOOL applyOnDocumentBody);
+void updateHtml(NSString *javascriptCode, id<LivePreviewDelegate> livePreviewDelegate, UITextView *textEditor, NSInteger effectiveCursorPos);
+void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, UITextView *textEditor, NSInteger effectiveCursorPos);
 
 - (void) updateLivePreview
 {

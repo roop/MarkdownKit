@@ -15,12 +15,14 @@
 @protocol LivePreviewDelegate;
 @protocol SyntaxHighlightDelegate;
 
-@interface MarkdownProcessor : NSObject<NSTextStorageDelegate>
+@interface MarkdownProcessor : NSObject
 
 @property (nonatomic, strong) SyntaxHighlighter* syntaxHighlighter;
 @property (nonatomic, weak) NSTextStorage* textStorage;
 @property (nonatomic, weak) id<LivePreviewDelegate> livePreviewDelegate;
 @property (nonatomic, weak) UITextView *textEditor;
+
+- (void) processMarkdown:(NSString *) text withCursorPosition: (NSUInteger) position;
 
 @end
 
