@@ -2641,7 +2641,51 @@ parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 	}
 }
 
+/*
+ * Utils for multi-byte UTF-8 characters
+ */
 
+static uint8_t utf8_length_from_utf8_first_byte(uint8_t first_byte);
+
+static uint8_t nsstring_length_from_utf8_length(uint8_t utf8_length)
+{
+	return ((utf8_length <= 3)? 1 : 2);
+}
+
+static srcmap_t nsstring_length_of_utf8_sequence(const uint8_t *data, size_t size)
+{
+	srcmap_t len = 0;
+	int i = 0;
+	while (i < size) {
+		uint8_t utf8_length = utf8_length_from_utf8_first_byte(data[i]);
+		uint8_t nsstring_length = nsstring_length_from_utf8_length(utf8_length);
+		i += utf8_length;
+		len += nsstring_length;
+	}
+	return len;
+}
+
+static void write_sourcemap_for_utf8_sequence(const uint8_t *data, size_t size, srcmap_t *srcmap, srcmap_t *source_pos_ptr)
+{
+	srcmap_t source_pos = (*source_pos_ptr);
+	size_t i = 0;
+	while (i < size) {
+		uint8_t utf8_length = utf8_length_from_utf8_first_byte(data[i]);
+		uint8_t nsstring_length = nsstring_length_from_utf8_length(utf8_length);
+		assert(utf8_length >= 1);
+		srcmap_t source_pos_incr = 0;
+		while (utf8_length--) {
+			srcmap[i] = (source_pos + source_pos_incr);
+			i++;
+			if (source_pos_incr < (nsstring_length - 1)) {
+				// To prevent an abrupt jump in the sourcemap
+				source_pos_incr++;
+			}
+		}
+		source_pos += nsstring_length;
+	}
+	(*source_pos_ptr) = source_pos;
+}
 
 /*********************
  * REFERENCE PARSING *
@@ -2650,7 +2694,7 @@ parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 /* is_footnote • returns whether a line is a footnote definition or not */
 static int
 is_footnote(const uint8_t *data, size_t beg, size_t end, size_t *last, struct footnote_list *list,
-			void *shl)
+			void *shl, srcmap_t *source_pos_ptr)
 {
 	size_t i = 0;
 	struct buf *contents = 0;
@@ -2738,10 +2782,17 @@ is_footnote(const uint8_t *data, size_t beg, size_t end, size_t *last, struct fo
 	if (last)
 		*last = start;
 
-	shl_apply_syntax_formatting_with_range(shl, id_offset - 2, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "[^"
-	shl_apply_syntax_formatting_with_range(shl, id_offset, id_end - id_offset, SHL_FOOTNOTE_DEFINITION_REF);
-	shl_apply_syntax_formatting_with_range(shl, id_end, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "]:"
-	shl_apply_syntax_formatting_with_range(shl, id_end + 1, (*last) - id_end - 1, SHL_FOOTNOTE_DEFINITION_TEXT);
+	srcmap_t sp_begin = (*source_pos_ptr);
+	srcmap_t sp_id_begin = sp_begin + (srcmap_t) (id_offset - beg);
+	srcmap_t sp_id_end = sp_id_begin + nsstring_length_of_utf8_sequence(data + id_offset, id_end - id_offset);
+	srcmap_t sp_text_begin = sp_id_end + 2;
+	srcmap_t sp_text_end = sp_text_begin + nsstring_length_of_utf8_sequence(data + id_end + 2, (*last) - id_end - 2);
+	(*source_pos_ptr) = sp_text_end;
+
+	shl_apply_syntax_formatting_with_range(shl, sp_id_begin - 2, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "[^"
+	shl_apply_syntax_formatting_with_range(shl, sp_id_begin, sp_id_end - sp_id_begin, SHL_FOOTNOTE_DEFINITION_REF);
+	shl_apply_syntax_formatting_with_range(shl, sp_id_end, 2, SHL_FOOTNOTE_DEFINITION_REF_ENCLOSURE); // "]:"
+	shl_apply_syntax_formatting_with_range(shl, sp_text_begin, sp_text_end - sp_text_begin, SHL_FOOTNOTE_DEFINITION_TEXT);
 
 	if (list) {
 		struct footnote_ref *ref;
@@ -2761,7 +2812,7 @@ is_footnote(const uint8_t *data, size_t beg, size_t end, size_t *last, struct fo
 /* is_ref • returns whether a line is a reference or not */
 static int
 is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_ref **refs,
-	   void *shl)
+	   void *shl, srcmap_t *source_pos_ptr)
 {
 /*	int n; */
 	size_t i = 0;
@@ -2850,19 +2901,29 @@ is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_re
 	if (!line_end || link_end == link_offset)
 		return 0; /* garbage after the link empty link */
 
-	shl_apply_syntax_formatting_with_range(shl, id_offset - 1, 1, SHL_REF_DEFINITION_REF_ENCLOSURE); // "["
-	shl_apply_syntax_formatting_with_range(shl, id_offset, id_end - id_offset, SHL_REF_DEFINITION_REF);
-	shl_apply_syntax_formatting_with_range(shl, id_end, 2, SHL_REF_DEFINITION_REF_ENCLOSURE); // "]:"
+	srcmap_t sp_begin = (*source_pos_ptr);
+	srcmap_t sp_id_begin = sp_begin + (srcmap_t) (id_offset - beg);
+	srcmap_t sp_id_end = sp_id_begin + nsstring_length_of_utf8_sequence(data + id_offset, id_end - id_offset);
+	srcmap_t sp_link_begin = sp_id_end + (srcmap_t) (link_offset - id_end);
+	srcmap_t sp_link_end = sp_link_begin + nsstring_length_of_utf8_sequence(data + link_offset, link_end - link_offset);
+	srcmap_t sp_title_begin = sp_link_end + (srcmap_t) (title_offset - link_end);
+	srcmap_t sp_title_end = sp_title_begin + nsstring_length_of_utf8_sequence(data + title_offset, title_end - title_offset);
+	srcmap_t sp_end = sp_title_end + (srcmap_t) (line_end - title_end);
+	(*source_pos_ptr) = sp_end;
+
+	shl_apply_syntax_formatting_with_range(shl, sp_id_begin - 1, 1, SHL_REF_DEFINITION_REF_ENCLOSURE); // "["
+	shl_apply_syntax_formatting_with_range(shl, sp_id_begin, sp_id_end - sp_id_begin, SHL_REF_DEFINITION_REF);
+	shl_apply_syntax_formatting_with_range(shl, sp_id_end, 2, SHL_REF_DEFINITION_REF_ENCLOSURE); // "]:"
 	if (data[link_offset - 1] == '<')
-		shl_apply_syntax_formatting_with_range(shl, link_offset - 1, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // "<"
-	shl_apply_syntax_formatting_with_range(shl, link_offset, link_end - link_offset, SHL_REF_DEFINITION_URL);
+		shl_apply_syntax_formatting_with_range(shl, sp_link_begin - 1, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // "<"
+	shl_apply_syntax_formatting_with_range(shl, sp_link_begin, sp_link_end - sp_link_begin, SHL_REF_DEFINITION_URL);
 	if (link_end < end && data[link_end] == '>')
-		shl_apply_syntax_formatting_with_range(shl, link_end, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // ">"
+		shl_apply_syntax_formatting_with_range(shl, sp_link_end, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // ">"
 	if (title_end > title_offset) {
-		shl_apply_syntax_formatting_with_range(shl, title_offset - 1, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Opening " or ' or (
-		shl_apply_syntax_formatting_with_range(shl, title_offset, title_end - title_offset, SHL_REF_DEFINITION_TITLE);
+		shl_apply_syntax_formatting_with_range(shl, sp_title_begin - 1, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Opening " or ' or (
+		shl_apply_syntax_formatting_with_range(shl, sp_title_begin, sp_title_end - sp_title_begin, SHL_REF_DEFINITION_TITLE);
 		if (title_end < end && (data[title_end] == '\'' || data[title_end] == '"' || data[title_end] == ')'))
-			shl_apply_syntax_formatting_with_range(shl, title_end, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Closing " or ' or )
+			shl_apply_syntax_formatting_with_range(shl, sp_title_end, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Closing " or ' or )
 	}
 
 	/* a valid ref has been found, filling-in return structures */
@@ -2888,39 +2949,45 @@ is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_re
 	return 1;
 }
 
-static void expand_tabs(struct buf *ob, const uint8_t *line, size_t offset, size_t size)
+static void expand_tabs(struct buf *ob, const uint8_t *line, size_t offset, size_t size, srcmap_t *source_pos_ptr)
 {
 	size_t  i = 0, tab = 0;
+
+	srcmap_t source_pos = (*source_pos_ptr);
 
 	while (i < size) {
 		size_t org = i;
 
+		// Scan till we get a tab character
 		while (i < size && line[offset + i] != '\t') {
 			i++; tab++;
 		}
 
+		// Write the characters before the tab character
 		if (i > org) {
 			size_t orig_ob_size = ob->size;
 			bufput(ob, line + offset + org, i - org);
 
-			srcmap_t *sm = ob->srcmap + orig_ob_size;
-			size_t offset_plus_org = offset + org;
-			size_t smlen = (i - org);
-			while (smlen--) {
-				*sm++ = (srcmap_t) (offset_plus_org++);
-			}
-			// FIXME: Handle multi-byte chars
+			// Write source-mapping for these characters
+			write_sourcemap_for_utf8_sequence(ob->data + orig_ob_size, ob->size - orig_ob_size,
+											  ob->srcmap + orig_ob_size, &source_pos);
 		}
 
+		// If we haven't encountered a tab character, stop here
 		if (i >= size)
 			break;
 
+		// We have encountered a tab character.
+		// Write the spaces-equivalent of the tab character.
 		do {
 			bufputc(ob, ' '); tab++;
 		} while (tab % 4);
 
+		source_pos++;
 		i++;
 	}
+
+	(*source_pos_ptr) = source_pos;
 }
 
 /**********************
@@ -3030,10 +3097,11 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 	if (doc_size >= 3 && memcmp(document, UTF8_BOM, 3) == 0)
 		beg += 3;
 
+	srcmap_t source_pos = 0;
 	while (beg < doc_size) /* iterating over lines */
-		if (footnotes_enabled && is_footnote(document, beg, doc_size, &end, &md->footnotes_found, md->shl))
+		if (footnotes_enabled && is_footnote(document, beg, doc_size, &end, &md->footnotes_found, md->shl, &source_pos))
 			beg = end;
-		else if (is_ref(document, beg, doc_size, &end, md->refs, md->shl))
+		else if (is_ref(document, beg, doc_size, &end, md->refs, md->shl, &source_pos))
 			beg = end;
 		else { /* skipping to the next line */
 			end = beg;
@@ -3042,16 +3110,15 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 
 			/* adding the line body if present */
 			if (end > beg)
-				expand_tabs(text, document, beg, end - beg);
+				expand_tabs(text, document, beg, end - beg, &source_pos);
 
-			while (end < doc_size &&
-				   (document[end] == '\n' ||
-					((document[end] == '\r') && (end + 1 < doc_size) && (document[end + 1] == '\n'))
-					)) {
-				/* add one \n for each line break (either LF or CRLF) */
-				srcmap_t *sm = text->srcmap + text->size;
-				bufputc(text, '\n');
-				*sm = (srcmap_t) ((document[end] == '\n')? end : end + 1);
+			while (end < doc_size && (document[end] == '\n' || document[end] == '\r')) {
+				/* add one \n per line ending, whether LF (Mac, Unix), CR (Old Mac) or CRLF (Windows) */
+				if (document[end] == '\n' || (end + 1 < doc_size && document[end + 1] != '\n')) {
+					// Skipping source mapping for newline characters
+					bufputc(text, '\n');
+				}
+				source_pos++;
 				end++;
 			}
 
@@ -3107,4 +3174,63 @@ sd_markdown_free(struct sd_markdown *md)
 	redcarpet_stack_free(&md->work_bufs[BUFFER_BLOCK]);
 
 	free(md);
+}
+
+
+/*
+ Following code adapted from PCRE:
+
+ -----------------------------------------------------------------------------
+ Written by Philip Hazel
+ Copyright (c) 1997-2013 University of Cambridge
+ -----------------------------------------------------------------------------
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice,
+ this list of conditions and the following disclaimer.
+
+ * Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in the
+ documentation and/or other materials provided with the distribution.
+
+ * Neither the name of the University of Cambridge nor the names of its
+ contributors may be used to endorse or promote products derived from
+ this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGE.
+ -----------------------------------------------------------------------------
+ */
+
+static uint8_t utf8_length_from_utf8_first_byte(uint8_t c)
+{
+	/* From pcre_tables.c: */
+	/* Table of the number of extra bytes, indexed by the first byte masked with
+	 0x3f. The highest number for a valid UTF-8 first byte is in fact 0x3d. */
+	static const unsigned char utf8_table4[] = {
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+		3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5 };
+
+	if (c < 128) {
+		// ASCII character
+		return 1;
+	}
+
+	// Multi-byte character
+	assert(c >= 0xc0); // A multi-byte UTF-8 sequence must not start with a '0x10xxxxxx' byte
+	assert(c < 0xfe);  // Bytes 0xfe and 0xff are not valid in UTF-8
+	uint8_t additional_bytes = utf8_table4[c & 0x3f];
+	return (1 + additional_bytes);
 }
