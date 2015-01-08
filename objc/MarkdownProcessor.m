@@ -47,7 +47,8 @@
     assert(position >= 0);
 
     if (!self.syntaxHighlighter) {
-        self.syntaxHighlighter = [SyntaxHighlighter new];
+        NSLog(@"MarkdownProcessor: syntaxHighlighter is not set");
+        return;
     }
     _syntaxHighlightArbiter.syntaxHighlighter = self.syntaxHighlighter;
     _syntaxHighlightArbiter.attributedText = textStorage;
