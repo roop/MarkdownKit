@@ -109,7 +109,7 @@ struct sd_callbacks {
 };
 
 /* header methods used internally in Redcarpet */
-char* header_anchor(struct buf *text);
+char* header_anchor(const struct buf *text);
 
 struct sd_markdown;
 

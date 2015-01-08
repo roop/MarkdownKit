@@ -354,7 +354,7 @@ rndr_linebreak(struct buf *ob, void *opaque)
 	return 1;
 }
 
-char *header_anchor(struct buf *text)
+char *header_anchor(const struct buf *text)
 {
     assert(0); // We don't use redcarpet in TOC mode, so we'll never call this function
     return "";
@@ -816,7 +816,8 @@ rndr_footnote_ref(struct buf *ob, unsigned int num, void *opaque)
 }
 
 static void
-toc_header(struct buf *ob, const struct buf *text, int level, void *opaque)
+toc_header(struct buf *ob, const struct buf *text, int level, void *opaque,
+           srcmap_t *srcmap, size_t srcmap_len, size_t srcmap_content_offset, size_t srcmap_content_len)
 {
 	struct html_renderopt *options = opaque;
 

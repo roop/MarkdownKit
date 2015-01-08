@@ -350,7 +350,7 @@ void entityfilter_delete(entityfilter_ctx *ctx)
 static const char *parse_hex(const char *s, char *output)
 {
     int n;
-    n = strtol(s, NULL, 16);
+    n = (int) strtol(s, NULL, 16);
     output[0] = n;
     output[1] = 0;
     /* TODO(falmeida): Make this function return void */
@@ -365,7 +365,7 @@ static const char *parse_hex(const char *s, char *output)
 static const char *parse_dec(const char *s, char *output)
 {
     int n;
-    n = strtol(s, NULL, 10);
+    n = (int) strtol(s, NULL, 10);
     output[0] = n;
     output[1] = 0;
     return output;

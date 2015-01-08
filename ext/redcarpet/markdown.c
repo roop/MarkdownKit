@@ -90,8 +90,8 @@ typedef size_t
 (*char_trigger)(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
 
 static size_t char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
-static size_t char_underline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
-static size_t char_highlight(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
+// static size_t char_underline(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
+// static size_t char_highlight(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size);
 static size_t char_quote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
 static size_t char_linebreak(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
 static size_t char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
