@@ -18,10 +18,9 @@
 @interface MarkdownProcessor : NSObject
 
 @property (nonatomic, strong) SyntaxHighlighter* syntaxHighlighter;
-@property (nonatomic, weak) NSTextStorage* textStorage;
 @property (nonatomic, weak) id<LivePreviewDelegate> livePreviewDelegate;
 
-- (void) processMarkdown:(NSString *) text withCursorPosition: (NSUInteger) position;
+- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSUInteger) position;
 
 @end
 

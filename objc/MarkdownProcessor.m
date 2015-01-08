@@ -22,7 +22,6 @@
     struct buf *_prev_ob, *_cur_ob;
 }
 
-- (void) processMarkdown:(NSString *) text withCursorPosition: (NSUInteger) position;
 - (void) updateLivePreview;
 
 @end
@@ -43,7 +42,7 @@
     return self;
 }
 
-- (void) processMarkdown:(NSString *) text withCursorPosition: (NSUInteger) position
+- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSUInteger) position;
 {
     assert(position >= 0);
 
@@ -51,13 +50,13 @@
         self.syntaxHighlighter = [SyntaxHighlighter new];
     }
     _syntaxHighlightArbiter.syntaxHighlighter = self.syntaxHighlighter;
-    _syntaxHighlightArbiter.attributedText = self.textStorage;
+    _syntaxHighlightArbiter.attributedText = textStorage;
 
     struct sd_callbacks callbacks;
     struct html_renderopt options;
     struct sd_markdown *markdown;
 
-    const char *cstring = [text UTF8String];
+    const char *cstring = [textStorage.string UTF8String];
     struct buf *ib = bufnew(BUFFER_GROW_SIZE);
     bufputs(ib, cstring);
 
