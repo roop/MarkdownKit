@@ -80,6 +80,10 @@
     sd_markdown_free(markdown);
     bufrelease(ib);
 
+    if (_livePreviewDelegate == nil) {
+        return;
+    }
+
     if (_prev_ob == 0) {
         NSString *html = [[NSString alloc] initWithBytes:ob->data length:ob->size encoding:NSUTF8StringEncoding];
         NSString *preHtml = @""
