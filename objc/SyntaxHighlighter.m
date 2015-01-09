@@ -12,11 +12,17 @@
 - (UIColor *) dimmedBlueColor;
 - (UIColor *) veryLightGrayColor;
 - (UIColor *) foregroundColorForSyntaxFormatting:(shl_syntax_formatting_t) fmt;
+- (UIFont *) italicFont;
+- (UIFont *) boldFont;
+- (UIFont *) boldItalicFont;
 @end
 
 @implementation SyntaxHighlighter {
     UIColor *_dimmedBlueColor;
     UIColor *_veryLightGrayColor;
+    UIFont *_italicFont;
+    UIFont *_boldFont;
+    UIFont *_boldItalicFont;
 }
 
 - (instancetype)init {
@@ -24,13 +30,22 @@
     if (self) {
         _dimmedBlueColor = nil;
         _veryLightGrayColor = nil;
+        _italicFont = nil;
+        _boldFont = nil;
+        _boldItalicFont = nil;
     }
     return self;
 }
 
-#pragma mark - SyntaxHighlightDelegate
+- (void)setDefaultFont:(UIFont *)defaultFont
+{
+    _defaultFont = defaultFont;
+    _italicFont = nil;
+    _boldFont = nil;
+    _boldItalicFont = nil;
+}
 
-static UIFontDescriptorSymbolicTraits typefaceTraitsForTextFormatting(shl_text_formatting_t fmt);
+#pragma mark - SyntaxHighlightDelegate
 
 - (void) applySyntaxHighlight:(struct SyntaxHighlightData)shlData inText:(NSMutableAttributedString *)str range:(NSRange)range
 {
@@ -98,9 +113,7 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
 - (void) applyFontAttributesUsingTextFormatting:(shl_text_formatting_t)fmt
                                          inText:(NSMutableAttributedString *)str range:(NSRange)range
                              existingAttributes:(NSDictionary *)attributes {
-    UIFontDescriptorSymbolicTraits reqdTypefaceTraits = typefaceTraitsForTextFormatting(fmt);
-    UIFontDescriptor *fontDescriptor = [self.defaultFont.fontDescriptor fontDescriptorWithSymbolicTraits:reqdTypefaceTraits];
-    UIFont *font = [UIFont fontWithDescriptor:fontDescriptor size:self.defaultFont.pointSize];
+    UIFont *font = [self fontForTextFormatting:fmt];
     [str addAttribute:NSFontAttributeName value:font range:range];
 }
 
@@ -160,6 +173,72 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
     return [UIColor lightGrayColor];
 }
 
+- (UIFont *)italicFont
+{
+    if (!_italicFont) {
+        UIFontDescriptor *fontDescriptor =
+        [UIFontDescriptor
+         fontDescriptorWithFontAttributes:@{
+                                            @"NSFontFamilyAttribute": self.defaultFont.familyName,
+                                            @"NSFontFaceAttribute": @"Italic"
+                                            }];
+        _italicFont = [UIFont fontWithDescriptor:fontDescriptor size:self.defaultFont.pointSize];
+    }
+    return _italicFont;
+}
+
+- (UIFont *)boldFont
+{
+    if (!_boldFont) {
+        UIFontDescriptor *fontDescriptor =
+        [UIFontDescriptor
+         fontDescriptorWithFontAttributes:@{
+                                            @"NSFontFamilyAttribute": self.defaultFont.familyName,
+                                            @"NSFontFaceAttribute": @"Bold"
+                                            }];
+        _boldFont = [UIFont fontWithDescriptor:fontDescriptor size:self.defaultFont.pointSize];
+    }
+    return _boldFont;
+}
+
+- (UIFont *)boldItalicFont
+{
+    if (!_boldItalicFont) {
+        UIFontDescriptor *fontDescriptor =
+        [UIFontDescriptor
+         fontDescriptorWithFontAttributes:@{
+                                            @"NSFontFamilyAttribute": self.defaultFont.familyName,
+                                            @"NSFontFaceAttribute": @"Bold Italic"
+                                            }];
+        _boldItalicFont = [UIFont fontWithDescriptor:fontDescriptor size:self.defaultFont.pointSize];
+    }
+    return _boldItalicFont;
+}
+
+- (UIFont *) fontForTextFormatting:(shl_text_formatting_t) fmt
+{
+    if (((fmt & SHL_STRONG_CONTENT) == SHL_STRONG_CONTENT) ||
+        ((fmt & SHL_HEADER_CONTENT) == SHL_HEADER_CONTENT) ||
+        ((fmt & SHL_TABLE_HEADER_CELL_CONTENT) == SHL_TABLE_HEADER_CELL_CONTENT)) {
+        // bold
+        if ((fmt & SHL_EM_CONTENT) == SHL_EM_CONTENT) {
+            // And italic
+            return self.boldItalicFont;
+        } else {
+            // Just bold
+            return self.boldFont;
+        }
+    } else {
+        // Not bold
+        if ((fmt & SHL_EM_CONTENT) == SHL_EM_CONTENT) {
+            // Just italic
+            return self.italicFont;
+        }
+    }
+    // Nothing special
+    return self.defaultFont;
+}
+
 @end
 
 #pragma mark - static helper functions
@@ -195,22 +274,4 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
     } else {
         [textStorage removeAttribute:attrName range:range];
     }
-}
-
-static UIFontDescriptorSymbolicTraits typefaceTraitsForTextFormatting(shl_text_formatting_t fmt)
-{
-    UIFontDescriptorSymbolicTraits typefaceTraits = 0;
-    if (fmt & SHL_EM_CONTENT) {
-        typefaceTraits |= UIFontDescriptorTraitItalic;
-    }
-    if (fmt & SHL_STRONG_CONTENT) {
-        typefaceTraits |= UIFontDescriptorTraitBold;
-    }
-    if ((fmt & SHL_CODE_BLOCK_CONTENT) || (fmt & SHL_CODE_SPAN_CONTENT)) {
-        // Do nothing
-    }
-    if ((fmt & SHL_HEADER_CONTENT) || (fmt & SHL_TABLE_HEADER_CELL_CONTENT)) {
-        typefaceTraits |= UIFontDescriptorTraitBold;
-    }
-    return typefaceTraits;
 }
