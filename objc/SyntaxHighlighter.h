@@ -17,6 +17,12 @@
 - (void) applySyntaxHighlight:(struct SyntaxHighlightData)shlData inText:(NSMutableAttributedString *)str range:(NSRange)range;
 
 // The following are meant to be overridden in subclasses, as required
+
+// For adopting a color scheme
+- (UIColor *) foregroundColorForSyntaxFormatting:(MarkdownMarkup) fmt;
+- (UIColor *) foregroundColorForTextFormatting:(MarkdownTextContent) fmt;
+
+// For more control
 - (void) applyMarkupFormatting:(shl_syntax_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range;
 - (void) applyTextFormatting:(shl_text_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range;
 - (void) applyFontAttributesUsingTextFormatting:(shl_text_formatting_t)fmt

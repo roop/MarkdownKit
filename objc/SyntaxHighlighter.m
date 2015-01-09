@@ -11,7 +11,6 @@
 @interface SyntaxHighlighter ()
 - (UIColor *) dimmedBlueColor;
 - (UIColor *) veryLightGrayColor;
-- (UIColor *) foregroundColorForSyntaxFormatting:(shl_syntax_formatting_t) fmt;
 - (UIFont *) italicFont;
 - (UIFont *) boldFont;
 - (UIFont *) boldItalicFont;
@@ -65,13 +64,13 @@
         [str addAttribute:NSFontAttributeName value:self.defaultFont range:range];
     }
 
-    // Remove background color
-    [str removeAttribute:NSBackgroundColorAttributeName range:range];
-
     // Add foreground color, if applicable
-    [str addAttribute:NSForegroundColorAttributeName
-                value:[self foregroundColorForSyntaxFormatting:fmt]
-                range:range];
+    UIColor *fgColor = [self foregroundColorForSyntaxFormatting:fmt];
+    if (fgColor) {
+        [str addAttribute:NSForegroundColorAttributeName value:fgColor range:range];
+    } else {
+        [str removeAttribute:NSForegroundColorAttributeName range:range];
+    }
 }
 
 static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSString *attrName,
@@ -99,14 +98,14 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
          applyTextFormattingUnderlineStrikethrough(attributes,
                                                    NSStrikethroughStyleAttributeName, MarkdownTextContentStrikethrough,
                                                    str, fmt, range);
-         // Foreground Color
-         applyTextFormattingColor(attributes,
-                                  NSForegroundColorAttributeName, MarkdownTextContentLinked, [UIColor blueColor],
-                                  str, fmt, range);
-         // Background Color
-         applyTextFormattingColor(attributes,
-                                  NSBackgroundColorAttributeName, MarkdownTextContentCodeSpan, [self veryLightGrayColor],
-                                  str, fmt, range);
+
+         // Add foreground color, if applicable
+         UIColor *fgColor = [self foregroundColorForTextFormatting:fmt];
+         if (fgColor) {
+             [str addAttribute:NSForegroundColorAttributeName value:fgColor range:range];
+         } else {
+             [str removeAttribute:NSForegroundColorAttributeName range:range];
+         }
      }];
 }
 
@@ -135,7 +134,7 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
     return _veryLightGrayColor;
 }
 
-- (UIColor *) foregroundColorForSyntaxFormatting:(shl_syntax_formatting_t) fmt
+- (UIColor *) foregroundColorForSyntaxFormatting:(MarkdownMarkup) fmt
 {
     switch (fmt) {
 
@@ -171,6 +170,14 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
             return [UIColor lightGrayColor];
     }
     return [UIColor lightGrayColor];
+}
+
+- (UIColor *) foregroundColorForTextFormatting:(MarkdownTextContent) fmt
+{
+    if ((fmt & MarkdownTextContentLinked) == MarkdownTextContentLinked) {
+        return [UIColor blueColor];
+    }
+    return nil;
 }
 
 - (UIFont *)italicFont
@@ -254,23 +261,6 @@ static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSStr
     }
     if (shouldBePresent) {
         [textStorage addAttribute:attrName value:[NSNumber numberWithInteger:NSUnderlineStyleSingle] range:range];
-    } else {
-        [textStorage removeAttribute:attrName range:range];
-    }
-}
-
-static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
-                                     shl_text_formatting_t fmt_match, UIColor *color,
-                                     NSMutableAttributedString *textStorage, shl_text_formatting_t fmt, NSRange range)
-{
-    UIColor *existingColor = attrs[attrName];
-    UIColor *requiredColor = ((fmt & fmt_match) == fmt_match) ? color : nil;
-    if ((existingColor == nil && requiredColor == nil) ||
-        ([existingColor isEqual:requiredColor])) {
-        return;
-    }
-    if (requiredColor) {
-        [textStorage addAttribute:attrName value:requiredColor range:range];
     } else {
         [textStorage removeAttribute:attrName range:range];
     }
