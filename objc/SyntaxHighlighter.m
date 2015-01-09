@@ -93,19 +93,19 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
 
          // Underline
          applyTextFormattingUnderlineStrikethrough(attributes,
-                                                   NSUnderlineStyleAttributeName, SHL_UNDERLINE_CONTENT,
+                                                   NSUnderlineStyleAttributeName, MarkdownTextContentUnderlined,
                                                    str, fmt, range);
          // Strikethrough
          applyTextFormattingUnderlineStrikethrough(attributes,
-                                                   NSUnderlineStyleAttributeName, SHL_UNDERLINE_CONTENT,
+                                                   NSStrikethroughStyleAttributeName, MarkdownTextContentStrikethrough,
                                                    str, fmt, range);
          // Foreground Color
          applyTextFormattingColor(attributes,
-                                  NSForegroundColorAttributeName, SHL_LINKED_CONTENT, [UIColor blueColor],
+                                  NSForegroundColorAttributeName, MarkdownTextContentLinked, [UIColor blueColor],
                                   str, fmt, range);
          // Background Color
          applyTextFormattingColor(attributes,
-                                  NSBackgroundColorAttributeName, SHL_CODE_SPAN_CONTENT, [self veryLightGrayColor],
+                                  NSBackgroundColorAttributeName, MarkdownTextContentCodeSpan, [self veryLightGrayColor],
                                   str, fmt, range);
      }];
 }
@@ -139,32 +139,32 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
 {
     switch (fmt) {
 
-        case SHL_AUTOLINKED_URL:
+        case MarkdownMarkupAutolinkedURL:
             return [UIColor blueColor];
 
-        case SHL_LINK_OR_IMG_URL:
-        case SHL_REF_DEFINITION_URL:
+        case MarkdownMarkupLinkOrImageURL:
+        case MarkdownMarkupRefDefinitionURL:
             return [self dimmedBlueColor];
 
-        case SHL_IMG_ALT_TEXT:
+        case MarkdownMarkupImageAltText:
             return [UIColor purpleColor];
 
-        case SHL_LINK_OR_IMG_TITLE:
-        case SHL_REF_DEFINITION_TITLE:
+        case MarkdownMarkupLinkOrImageTitle:
+        case MarkdownMarkupRefDefinitionTitle:
             return [UIColor grayColor];
 
-        case SHL_LINK_OR_IMG_REF:
-        case SHL_FOOTNOTE_REF:
+        case MarkdownMarkupLinkOrImageRef:
+        case MarkdownMarkupFootnoteRef:
             return [UIColor grayColor];
 
-        case SHL_REF_DEFINITION_REF:
-        case SHL_FOOTNOTE_DEFINITION_REF:
+        case MarkdownMarkupRefDefinitionRef:
+        case MarkdownMarkupFootnoteDefinitionRef:
             return [UIColor grayColor];
 
-        case SHL_FOOTNOTE_DEFINITION_TEXT:
+        case MarkdownMarkupFootnoteDefinitionText:
             return [UIColor grayColor];
 
-        case SHL_RAW_HTML_BLOCK_TEXT_CONTENT:
+        case MarkdownMarkupRawHTMLBlockTextContent:
             return [UIColor blackColor];
 
         default:
@@ -217,11 +217,11 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
 
 - (UIFont *) fontForTextFormatting:(shl_text_formatting_t) fmt
 {
-    if (((fmt & SHL_STRONG_CONTENT) == SHL_STRONG_CONTENT) ||
-        ((fmt & SHL_HEADER_CONTENT) == SHL_HEADER_CONTENT) ||
-        ((fmt & SHL_TABLE_HEADER_CELL_CONTENT) == SHL_TABLE_HEADER_CELL_CONTENT)) {
+    if (((fmt & MarkdownTextContentStrong) == MarkdownTextContentStrong) ||
+        ((fmt & MarkdownTextContentHeader) == MarkdownTextContentHeader) ||
+        ((fmt & MarkdownTextContentTableHeader) == MarkdownTextContentTableHeader)) {
         // bold
-        if ((fmt & SHL_EM_CONTENT) == SHL_EM_CONTENT) {
+        if ((fmt & MarkdownTextContentEmphasized) == MarkdownTextContentEmphasized) {
             // And italic
             return self.boldItalicFont;
         } else {
@@ -230,7 +230,7 @@ static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
         }
     } else {
         // Not bold
-        if ((fmt & SHL_EM_CONTENT) == SHL_EM_CONTENT) {
+        if ((fmt & MarkdownTextContentEmphasized) == MarkdownTextContentEmphasized) {
             // Just italic
             return self.italicFont;
         }

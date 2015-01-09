@@ -10,6 +10,8 @@
 
 #include "buffer.h"
 
+#ifndef __OBJC__
+
 typedef uint16_t shl_text_formatting_t;
 enum {
     // Text formatting can involve font changes.
@@ -40,6 +42,32 @@ enum {
 
     // Can go upto (3 << 14) = 0xC000
 };
+
+#else
+
+typedef NS_OPTIONS(uint16_t, MarkdownTextContent) {
+    MarkdownTextContentRegular = 0,
+
+    MarkdownTextContentEmphasized = (1 << 0),
+    MarkdownTextContentStrong = (1 << 1),
+    MarkdownTextContentUnderlined = (1 << 2),
+    MarkdownTextContentStrikethrough = (1 << 3),
+    MarkdownTextContentHighlighted = (1 << 4),
+    MarkdownTextContentLinked = (1 << 5),
+    MarkdownTextContentSuperscripted = (1 << 6),
+
+    MarkdownTextContentHeader = (1 << 10),
+    MarkdownTextContentTableHeader = (1 << 11),
+
+    MarkdownTextContentCodeBlock = (1 << 14),
+    MarkdownTextContentCodeSpan = (2 << 14)
+};
+
+typedef MarkdownTextContent shl_text_formatting_t;
+
+#endif
+
+#ifndef __OBJC__
 
 typedef uint16_t shl_syntax_formatting_t;
 enum {
@@ -85,6 +113,54 @@ enum {
     SHL_RAW_HTML_BLOCK_TEXT_CONTENT,
     SHL_RAW_HTML_COMMENT,
 };
+
+#else
+
+typedef NS_ENUM(uint16_t, MarkdownMarkup) {
+    MarkdownMarkupAtxHeaderHash = 1,
+    MarkdownMarkupSetextHeaderUnderline,
+    MarkdownMarkupHorizontalRule,
+    MarkdownMarkupBlockquoteLinePrefix,
+    MarkdownMarkupListItemPrefix,
+    MarkdownMarkupCodeFence,
+    MarkdownMarkupTableBorder,
+
+    MarkdownMarkupEmphasisChar,
+    MarkdownMarkupCodeSpanChar,
+
+    MarkdownMarkupLinkOrImageSyntax,
+    MarkdownMarkupLinkOrImageRef,
+    MarkdownMarkupLinkOrImageRefEnclosure,
+    MarkdownMarkupLinkOrImageURL,
+    MarkdownMarkupLinkOrImageTitle,
+    MarkdownMarkupLinkOrImageTitleQuotes,
+    MarkdownMarkupImageAltText,
+    MarkdownMarkupAutolinkAngleBrackets,
+    MarkdownMarkupAutolinkedURL,
+
+    MarkdownMarkupSuperscriptSyntax,
+
+    MarkdownMarkupRefDefinitionRef,
+    MarkdownMarkupRefDefinitionRefEnclosure,
+    MarkdownMarkupRefDefinitionURL,
+    MarkdownMarkupRefDefinitionURLEnclosure,
+    MarkdownMarkupRefDefinitionTitle,
+    MarkdownMarkupRefDefinitionTitleQuotes,
+
+    MarkdownMarkupFootnoteRef,
+    MarkdownMarkupFootnoteRefEnclosure,
+    MarkdownMarkupFootnoteDefinitionRef,
+    MarkdownMarkupFootnoteDefinitionRefEnclosure,
+    MarkdownMarkupFootnoteDefinitionText,
+
+    MarkdownMarkupRawHTMLTag,
+    MarkdownMarkupRawHTMLBlockTextContent,
+    MarkdownMarkupRawHTMLComment
+};
+
+typedef MarkdownMarkup shl_syntax_formatting_t;
+
+#endif
 
 struct SyntaxHighlightData {
     shl_syntax_formatting_t markupFormatting; // If markupFormatting is 0, this is text content, not markup
