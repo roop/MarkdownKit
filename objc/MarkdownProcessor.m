@@ -42,10 +42,13 @@
     return self;
 }
 
-- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSUInteger) position;
+- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage
 {
-    assert(position >= 0);
+    [self processMarkdownInTextStorage:textStorage withCursorPosition: (NSInteger) -1];
+}
 
+- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSInteger) position;
+{
     if (!self.syntaxHighlighter) {
         NSLog(@"MarkdownProcessor: syntaxHighlighter is not set");
         return;
@@ -63,8 +66,13 @@
 
     struct buf *ob = bufnew(BUFFER_GROW_SIZE);
     sdhtml_renderer(&callbacks, &options, 0);
-    options.cursor_pos = (size_t) position;
-    options.cursor_marker_status = CURSOR_MARKER_YET_TO_BE_INSERTED;
+    if (position >= 0) {
+        options.cursor_pos = (size_t) position;
+        options.cursor_marker_status = CURSOR_MARKER_YET_TO_BE_INSERTED;
+    } else {
+        options.cursor_pos = (size_t) 0;
+        options.cursor_marker_status = CURSOR_MARKER_SHOULD_NOT_BE_INSERTED;
+    }
     unsigned int md_extensions = (
                                   MKDEXT_TABLES |
                                   MKDEXT_FENCED_CODE |

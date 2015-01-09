@@ -20,7 +20,8 @@
 @property (nonatomic, strong) SyntaxHighlighter* syntaxHighlighter;
 @property (nonatomic, weak) id<LivePreviewDelegate> livePreviewDelegate;
 
-- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSUInteger) position;
+- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage;
+- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSInteger) position;
 
 @end
 
