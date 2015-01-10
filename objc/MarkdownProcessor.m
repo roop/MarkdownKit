@@ -94,24 +94,25 @@
     }
 
     if (_prev_ob == 0) {
-        NSString *html = [[NSString alloc] initWithBytes:ob->data length:ob->size encoding:NSUTF8StringEncoding];
-        NSString *preHtml = @""
-        "<html>"
-        "<head>"
-        "<meta name=\"viewport\" content=\"initial-scale=1.0, maximum-scale=1.0, user-scalable=no\" />"
-        "<style>%s</style>"
-        "<script>"
-        "function topOfCursorMarker() {"
-        "    return (document.getElementById(\"__cursor_marker__\").getClientRects()[0]).top;"
-        "}"
-        "</script>"
-        "</head>"
-        "<body style=\"font-size: 16;\">";
-        NSString *postHtml = @""
-        "</body>"
-        "</html>";
-        NSString *full = [preHtml stringByAppendingFormat:@"%@%@", html, postHtml];
-        [_livePreviewDelegate loadHTMLAfterInsertingCSS:full];
+        NSMutableString *js = [NSMutableString new];
+        [js appendString:@""
+         "var retVal = 0;"
+         "try {"
+         "    document.body.innerHTML = \'"
+         ];
+        appendHtmlToString(js,  ob->data, ob->size, /*nl_escaped*/ true);
+        [js appendString:@"\';"
+         "} catch (ex) {"
+         "    retVal = 1" // ERROR_SETTING_INNERHTML
+         "}"
+         "retVal"
+         ];
+        [_livePreviewDelegate evaluateJavaScript:js completionHandler:^(id result, NSError *error) {
+            if (error) {
+                NSLog(@"Error sourcing loadHTML js: %@", error);
+                return;
+            }
+        }];
         _prev_ob = ob;
         return;
     }
@@ -135,6 +136,16 @@
     _isLivePreviewUpdatePending = YES;
 
     [self performSelector:@selector(updateLivePreview) withObject:nil afterDelay:delay];
+}
+
+static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t length, bool nl_escaped);
+
+- (NSString*)currentHtmlWithEscapedNewlines
+{
+    struct buf *ob = (_cur_ob ? _cur_ob : (_prev_ob ? _prev_ob : 0));
+    NSMutableString *htmlStr = [NSMutableString new];
+    appendHtmlToString(htmlStr, ob->data, ob->size, /*nl_escaped*/ true);
+    return htmlStr;
 }
 
 #pragma mark - Internal methods
@@ -337,21 +348,7 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
      "try {"
      "    e.innerHTML = \'"
      ];
-    size_t i, p = content_offset;
-    for (i = content_offset; i < (content_offset + content_length); i++) {
-        if (toHtml->data[i] == '\n') {
-            [js appendFormat:@"%@\\n", [[NSString alloc] initWithBytes:(toHtml->data + p) length:(i - p)
-                                                              encoding:NSUTF8StringEncoding]];
-            p = i + 1;
-        }
-    }
-    if (i > p) {
-        NSString *str = [[NSString alloc] initWithBytes:(toHtml->data + p) length:(i - p)
-                                               encoding:NSUTF8StringEncoding];
-        if (str) {
-            [js appendString:str];
-        }
-    }
+    appendHtmlToString(js, toHtml->data + content_offset, content_length, /*nl_escaped*/ true);
     [js appendString:@"\';"
      "} catch (ex) {"
      "    retVal = 1" // ERROR_SETTING_INNERHTML
@@ -366,6 +363,34 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
 
     bufrelease(traversal_info);
     return js;
+}
+
+static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t length, bool nl_escaped)
+{
+    size_t i = 0;
+    size_t p = 0;
+    if (nl_escaped) {
+        for (i = 0; i < length; i++) {
+            if (data[i] == '\n') {
+                NSString *substr = [[NSString alloc] initWithBytes:(data + p) length:(i - p) encoding:NSUTF8StringEncoding];
+                if (substr) {
+                    [str appendFormat:@"%@\\n", substr];
+                }
+                p = i + 1;
+            }
+        }
+        if (i > p) {
+            NSString *substr = [[NSString alloc] initWithBytes:(data + p) length:(i - p) encoding:NSUTF8StringEncoding];
+            if (substr) {
+                [str appendString:substr];
+            }
+        }
+    } else {
+        NSString *substr = [[NSString alloc] initWithBytes:data length:length encoding:NSUTF8StringEncoding];
+        if (substr) {
+            [str appendString:substr];
+        }
+    }
 }
 
 void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, NSInteger effectiveCursorPos)

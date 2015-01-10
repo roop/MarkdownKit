@@ -23,12 +23,13 @@
 - (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage;
 - (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSInteger) position;
 
+- (NSString*)currentHtmlWithEscapedNewlines;
+
 @end
 
 
 @protocol LivePreviewDelegate <NSObject>
 
-- (void)loadHTMLAfterInsertingCSS:(NSString *)html; // html includes a '%s' to insert CSS
 - (void)evaluateJavaScript:(NSString *)javaScriptString completionHandler:(void (^)(id, NSError *))completionHandler;
 - (void)scrollVerticallyBy:(CGFloat)yDiff;
 
