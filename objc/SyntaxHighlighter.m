@@ -85,7 +85,8 @@ static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSStr
      usingBlock:^(NSDictionary *attributes, NSRange range, BOOL *stop) {
 
          // Font
-         [self applyFontAttributesUsingTextFormatting:fmt inText:str range:range existingAttributes:attributes];
+         // Not setting font attributes because it's hard to update them all when we need to change the font size
+         // [self applyFontAttributesUsingTextFormatting:fmt inText:str range:range existingAttributes:attributes];
 
          // Underline
          applyTextFormattingUnderlineStrikethrough(attributes,
