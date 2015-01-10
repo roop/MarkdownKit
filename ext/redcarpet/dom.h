@@ -18,6 +18,7 @@
 #define __DOM_H
 
 #include <stddef.h>
+#include "buffer.h"
 
 enum raw_html_t {
 	NOT_RAW_HTML = 0,

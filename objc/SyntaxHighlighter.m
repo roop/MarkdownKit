@@ -76,9 +76,6 @@
 static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSString *attrName,
                                                       shl_text_formatting_t fmt_match,
                                                       NSMutableAttributedString *textStorage, shl_text_formatting_t fmt, NSRange range);
-static void applyTextFormattingColor(NSDictionary *attrs, NSString *attrName,
-                                     shl_text_formatting_t fmt_match, UIColor *color,
-                                     NSMutableAttributedString *textStorage, shl_text_formatting_t fmt, NSRange range);
 
 - (void) applyTextFormatting:(shl_text_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range
 {
