@@ -53,7 +53,10 @@ void rndr_cursor_marker(struct buf *ob, void *opaque, srcmap_t *srcmap, size_t l
 	if (render_options->cursor_marker_status == CURSOR_MARKER_YET_TO_BE_INSERTED) {
 		while (len > 0 && srcmap[len - 1] < 0) len--;
 		if ((srcmap[0] <= render_options->cursor_pos) && (len > 0 && srcmap[len - 1] + 1 >= render_options->cursor_pos)) {
-			BUFPUTSL(ob, "<span id=\"__cursor_marker__\"></span>");
+			BUFPUTSL(ob, "<span id=\"__cursor_marker__\">&#8203;</span>");
+			// We insert a zero-width space char (&#8203;) so that we are ensured that the span is laid out
+			// by WebKit along with the text. If not it appears that when the cursor marker is between
+			// a space and a newline, WebKit lais it out lower than it does normally.
 			render_options->cursor_marker_status = CURSOR_MARKER_IS_INSERTED;
 			render_options->effective_cursor_pos = srcmap[effective_cursor_pos_index];
 		}
