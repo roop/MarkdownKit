@@ -44,10 +44,10 @@
 
 - (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage
 {
-    [self processMarkdownInTextStorage:textStorage withCursorPosition: (NSInteger) -1];
+    [self processMarkdownInTextStorage:textStorage withCursorPosition: (NSInteger) -1 withSyncScrolling: NO];
 }
 
-- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSInteger) position;
+- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSInteger) position withSyncScrolling: (BOOL)shouldScroll;
 {
     if (!self.syntaxHighlighter) {
         NSLog(@"MarkdownProcessor: syntaxHighlighter is not set");
@@ -116,7 +116,6 @@
         _prev_ob = ob;
         return;
     }
-
     NSTimeInterval delay = 0.0;
     if (_isLivePreviewUpdatePending) {
         // Drop any queued previous live-preview updates.
@@ -132,7 +131,10 @@
 
     assert(_cur_ob == 0);
     _cur_ob = ob;
-    _effectiveEditorCursorPos = ((options.cursor_marker_status == CURSOR_MARKER_IS_INSERTED)? options.effective_cursor_pos : -1);
+    _effectiveEditorCursorPos = -1;
+    if ((shouldScroll == YES) && (options.cursor_marker_status == CURSOR_MARKER_IS_INSERTED)) {
+        _effectiveEditorCursorPos = options.effective_cursor_pos;
+    }
     _isLivePreviewUpdatePending = YES;
 
     [self performSelector:@selector(updateLivePreview) withObject:nil afterDelay:delay];
