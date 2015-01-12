@@ -145,9 +145,12 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
 - (NSString*)currentHtmlWithEscapedNewlines
 {
     struct buf *ob = (_cur_ob ? _cur_ob : (_prev_ob ? _prev_ob : 0));
-    NSMutableString *htmlStr = [NSMutableString new];
-    appendHtmlToString(htmlStr, ob->data, ob->size, /*nl_escaped*/ true);
-    return htmlStr;
+    if (ob) {
+        NSMutableString *htmlStr = [NSMutableString new];
+        appendHtmlToString(htmlStr, ob->data, ob->size, /*nl_escaped*/ true);
+        return htmlStr;
+    }
+    return nil;
 }
 
 #pragma mark - Internal methods
