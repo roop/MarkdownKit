@@ -43,11 +43,19 @@
 }
 
 - (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage
+             syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
+                        updatePreview: (BOOL)shouldUpdatePreview
 {
-    [self processMarkdownInTextStorage:textStorage withCursorPosition: (NSInteger) -1 withSyncScrolling: NO];
+    [self processMarkdownInTextStorage:textStorage
+              syntaxHighlightCallbacks:shouldSyntaxHighlight
+                         updatePreview:shouldUpdatePreview
+            alignPreviewToTextPosition: -1];
 }
 
-- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSInteger) position withSyncScrolling: (BOOL)shouldScroll;
+- (void) processMarkdownInTextStorage: (NSTextStorage *) textStorage
+             syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
+                        updatePreview: (BOOL)shouldUpdatePreview
+           alignPreviewToTextPosition: (NSInteger)position;
 {
     if (!self.syntaxHighlighter) {
         NSLog(@"MarkdownProcessor: syntaxHighlighter is not set");
@@ -64,6 +72,7 @@
     struct buf *ib = bufnew(BUFFER_GROW_SIZE);
     bufputs(ib, cstring);
 
+    BOOL shouldScroll = (shouldUpdatePreview && position >= 0);
     struct buf *ob = bufnew(BUFFER_GROW_SIZE);
     sdhtml_renderer(&callbacks, &options, 0);
     if (position >= 0) {
@@ -83,13 +92,14 @@
                                   MKDEXT_LAX_SPACING |
                                   MKDEXT_TABLES
                                   );
-    markdown = sd_markdown_new(md_extensions, 16, &callbacks, &options, (__bridge void *) _syntaxHighlightArbiter);
+    markdown = sd_markdown_new(md_extensions, 16, &callbacks, &options,
+                               shouldSyntaxHighlight ? (__bridge void *) _syntaxHighlightArbiter : nil);
 
-    sd_markdown_render(ob, ib->data, ib->size, markdown); // Would make calls on the syntaxHighlightDelegate internally
+    sd_markdown_render(ob, ib->data, ib->size, markdown); // Would make calls on the syntaxHighlightArbiter internally
     sd_markdown_free(markdown);
     bufrelease(ib);
 
-    if (_livePreviewDelegate == nil) {
+    if (!shouldUpdatePreview || _livePreviewDelegate == nil) {
         return;
     }
 

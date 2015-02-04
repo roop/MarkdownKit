@@ -20,8 +20,13 @@
 @property (nonatomic, strong) SyntaxHighlighter* syntaxHighlighter;
 @property (nonatomic, weak) id<LivePreviewDelegate> livePreviewDelegate;
 
-- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage;
-- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage withCursorPosition: (NSInteger) position withSyncScrolling: (BOOL)shouldScroll;
+- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage
+             syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
+                        updatePreview: (BOOL)shouldUpdatePreview;
+- (void) processMarkdownInTextStorage: (NSTextStorage *) textStorage
+             syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
+                        updatePreview: (BOOL)shouldUpdatePreview
+           alignPreviewToTextPosition: (NSInteger)position;
 
 - (NSString*)currentHtmlWithEscapedNewlines;
 
