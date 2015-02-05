@@ -163,6 +163,40 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
     return nil;
 }
 
++ (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage
+{
+    struct sd_callbacks callbacks;
+    struct html_renderopt options;
+    struct sd_markdown *markdown;
+
+    const char *cstring = [textStorage.string UTF8String];
+    struct buf *ib = bufnew(BUFFER_GROW_SIZE);
+    bufputs(ib, cstring);
+
+    struct buf *ob = bufnew(BUFFER_GROW_SIZE);
+    sdhtml_renderer(&callbacks, &options, 0);
+    options.cursor_pos = (size_t) 0;
+    options.cursor_marker_status = CURSOR_MARKER_SHOULD_NOT_BE_INSERTED;
+    unsigned int md_extensions = (
+                                  MKDEXT_TABLES |
+                                  MKDEXT_FENCED_CODE |
+                                  MKDEXT_AUTOLINK |
+                                  MKDEXT_STRIKETHROUGH |
+                                  MKDEXT_HIGHLIGHT |
+                                  MKDEXT_FOOTNOTES |
+                                  MKDEXT_LAX_SPACING |
+                                  MKDEXT_TABLES
+                                  );
+    markdown = sd_markdown_new(md_extensions, 16, &callbacks, &options, nil);
+
+    sd_markdown_render(ob, ib->data, ib->size, markdown);
+    sd_markdown_free(markdown);
+    bufrelease(ib);
+    NSString *htmlString = [[NSString alloc] initWithBytes:ob->data length:ob->size encoding:NSUTF8StringEncoding];
+    bufrelease(ob);
+    return htmlString;
+}
+
 #pragma mark - Internal methods
 
 enum JavascriptCodeError {

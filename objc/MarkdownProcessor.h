@@ -30,6 +30,8 @@
 
 - (NSString*)currentHtmlWithEscapedNewlines;
 
++ (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage;
+
 @end
 
 
