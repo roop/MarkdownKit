@@ -11,6 +11,28 @@
 #include "MarkdownProcessor.h"
 #include "SyntaxHighlightArbiter.h"
 
+static void describeSyntaxHighlightData(const struct SyntaxHighlightData *shlData) {
+	if (shlData->markupFormatting > 0) {
+		printf("Markup\n");
+	} else {
+		printf("Text ");
+		if (shlData->textFormatting & MarkdownTextContentEmphasized) { printf("Emphasized "); }
+		if (shlData->textFormatting & MarkdownTextContentStrong) { printf("Strong "); }
+		if (shlData->textFormatting & MarkdownTextContentUnderlined) { printf("Underlined "); }
+		if (shlData->textFormatting & MarkdownTextContentStrikethrough) { printf("Strikethrough "); }
+		if (shlData->textFormatting & MarkdownTextContentHighlighted) { printf("Highlighted "); }
+		if (shlData->textFormatting & MarkdownTextContentLinked) { printf("Linked "); }
+		if (shlData->textFormatting & MarkdownTextContentSuperscripted) { printf("Superscripted "); }
+		if (shlData->textFormatting & MarkdownTextContentHeader) { printf("Header "); }
+		if (shlData->textFormatting & MarkdownTextContentTableHeader) { printf("TableHeader "); }
+		if (shlData->textFormatting & MarkdownTextContentListed) { printf("Listed "); }
+		if (shlData->textFormatting & MarkdownTextContentBlockquoted) { printf("Blockquoted "); }
+		if (shlData->textFormatting & MarkdownTextContentCodeBlock) { printf("CodeBlock "); }
+		if (shlData->textFormatting & MarkdownTextContentCodeSpan) { printf("CodeSpan "); }
+		printf("\n");
+	}
+}
+
 static void shl_apply_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t length, uint16_t fmt, bool isTextFormatting)
 {
     if (shl == 0 || srcmap == 0 || length == 0)
