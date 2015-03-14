@@ -32,6 +32,8 @@ enum {
 
     SHL_HEADER_CONTENT = (1 << 10),
     SHL_TABLE_HEADER_CELL_CONTENT = (1 << 11),
+    SHL_LIST_ITEM_CONTENT = (1 << 12),
+    SHL_BLOCKQUOTE_CONTENT = (1 << 13),
 
     // Can go upto (1 << 13) = 0x2000
 
@@ -58,6 +60,8 @@ typedef NS_OPTIONS(uint16_t, MarkdownTextContent) {
 
     MarkdownTextContentHeader = (1 << 10),
     MarkdownTextContentTableHeader = (1 << 11),
+    MarkdownTextContentListed = (1 << 12),
+    MarkdownTextContentBlockquoted = (1 << 13),
 
     MarkdownTextContentCodeBlock = (1 << 14),
     MarkdownTextContentCodeSpan = (2 << 14)

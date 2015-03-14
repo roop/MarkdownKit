@@ -1710,7 +1710,7 @@ prefix_uli(uint8_t *data, size_t size)
 
 /* parse_block • parsing of one block, returning next uint8_t to parse */
 static void parse_block(struct buf *ob, struct sd_markdown *rndr,
-			uint8_t *data, size_t size, srcmap_t *srcmap);
+			uint8_t *data, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt);
 
 
 /* parse_blockquote • handles parsing of a blockquote fragment */
@@ -1746,7 +1746,7 @@ parse_blockquote(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t
 		beg = end;
 	}
 
-	parse_block(out, rndr, work->data, work->size, work->srcmap);
+	parse_block(out, rndr, work->data, work->size, work->srcmap, SHL_BLOCKQUOTE_CONTENT);
 	if (rndr->cb.blockquote)
 		rndr->cb.blockquote(ob, out, rndr->opaque);
 	rndr_popbuf(rndr, BUFFER_BLOCK);
@@ -1759,7 +1759,7 @@ parse_htmlblock(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 
 /* parse_blockquote • handles parsing of a regular paragraph */
 static size_t
-parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap)
+parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	size_t i = 0, end = 0;
 	int level = 0, last_is_empty = 1;
@@ -1823,7 +1823,7 @@ parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 
 	if (!level) {
 		struct buf *tmp = rndr_newbuf(rndr, BUFFER_BLOCK);
-		parse_inline(tmp, rndr, work.data, work.size, srcmap, SHL_TEXT_CONTENT);
+		parse_inline(tmp, rndr, work.data, work.size, srcmap, txtfmt);
 		if (rndr->cb.paragraph)
 			rndr->cb.paragraph(ob, tmp, rndr->opaque);
 		rndr_popbuf(rndr, BUFFER_BLOCK);
@@ -1846,7 +1846,7 @@ parse_paragraph(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t 
 
 			if (work.size > 0) {
 				struct buf *tmp = rndr_newbuf(rndr, BUFFER_BLOCK);
-				parse_inline(tmp, rndr, work.data, work.size, srcmap, SHL_TEXT_CONTENT);
+				parse_inline(tmp, rndr, work.data, work.size, srcmap, txtfmt);
 
 				if (rndr->cb.paragraph)
 					rndr->cb.paragraph(ob, tmp, rndr->opaque);
@@ -2083,19 +2083,19 @@ parse_listitem(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t s
 	if (*flags & MKD_LI_BLOCK) {
 		/* intermediate render of block li */
 		if (sublist && sublist < work->size) {
-			parse_block(inter, rndr, work->data, sublist, work->srcmap);
-			parse_block(inter, rndr, work->data + sublist, work->size - sublist, srcmap_add(work->srcmap, sublist));
+			parse_block(inter, rndr, work->data, sublist, work->srcmap, SHL_LIST_ITEM_CONTENT);
+			parse_block(inter, rndr, work->data + sublist, work->size - sublist, srcmap_add(work->srcmap, sublist), SHL_LIST_ITEM_CONTENT);
 		}
 		else
-			parse_block(inter, rndr, work->data, work->size, work->srcmap);
+			parse_block(inter, rndr, work->data, work->size, work->srcmap, SHL_LIST_ITEM_CONTENT);
 	} else {
 		/* intermediate render of inline li */
 		if (sublist && sublist < work->size) {
-			parse_inline(inter, rndr, work->data, sublist, work->srcmap, SHL_TEXT_CONTENT);
-			parse_block(inter, rndr, work->data + sublist, work->size - sublist, srcmap_add(work->srcmap, sublist));
+			parse_inline(inter, rndr, work->data, sublist, work->srcmap, SHL_LIST_ITEM_CONTENT);
+			parse_block(inter, rndr, work->data + sublist, work->size - sublist, srcmap_add(work->srcmap, sublist), SHL_LIST_ITEM_CONTENT);
 		}
 		else
-			parse_inline(inter, rndr, work->data, work->size, work->srcmap, SHL_TEXT_CONTENT);
+			parse_inline(inter, rndr, work->data, work->size, work->srcmap, SHL_LIST_ITEM_CONTENT);
 	}
 
 	/* render of li itself */
@@ -2177,7 +2177,7 @@ parse_footnote_def(struct buf *ob, struct sd_markdown *rndr, unsigned int num, u
 	struct buf *work = 0;
 	work = rndr_newbuf(rndr, BUFFER_SPAN);
 
-	parse_block(work, rndr, data, size, 0);
+	parse_block(work, rndr, data, size, 0, 0);
 
 	if (rndr->cb.footnote_def)
 	rndr->cb.footnote_def(ob, work, num, rndr->opaque);
@@ -2590,7 +2590,7 @@ parse_table(
 
 /* parse_block • parsing of one block, returning next uint8_t to parse */
 static void
-parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap)
+parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size, srcmap_t *srcmap, shl_text_formatting_t txtfmt)
 {
 	size_t beg, end, i;
 	uint8_t *txt_data;
@@ -2649,7 +2649,7 @@ parse_block(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			beg += parse_list(ob, rndr, txt_data, end, txt_srcmap, MKD_LIST_ORDERED);
 
 		else
-			beg += parse_paragraph(ob, rndr, txt_data, end, txt_srcmap);
+			beg += parse_paragraph(ob, rndr, txt_data, end, txt_srcmap, txtfmt);
 	}
 }
 
@@ -3149,7 +3149,7 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 		if (text->data[text->size - 1] != '\n' &&  text->data[text->size - 1] != '\r')
 			bufputc(text, '\n');
 
-		parse_block(ob, md, text->data, text->size, text->srcmap);
+		parse_block(ob, md, text->data, text->size, text->srcmap, 0);
 	}
 
 	/* footnotes */
