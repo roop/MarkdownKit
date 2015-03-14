@@ -74,6 +74,8 @@ static void shl_apply_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t
 
 	if (begin >= 0 && prev_sm >= begin) {
 		NSRange stringRange = NSMakeRange(begin, prev_sm - begin + 1);
+		// printf("Range (%d, %d): ", (int) stringRange.location, (int) stringRange.length);
+		// describeSyntaxHighlightData(&shlData);
 		[shlArbiter ensureTextRange:stringRange isSyntaxHighlightedWithData:shlData];
 	}
 }
