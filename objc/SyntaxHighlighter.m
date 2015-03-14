@@ -59,10 +59,11 @@
 
 - (void) applyMarkupFormatting:(shl_syntax_formatting_t)fmt inText:(NSMutableAttributedString *)str range:(NSRange)range
 {
-    // Apply default font (to remove bold, italics, etc., if present)
-    if (self.defaultFont) {
-        [str addAttribute:NSFontAttributeName value:self.defaultFont range:range];
-    }
+    // No need to apply default font (to remove bold, italics, etc., if present)
+    // because we don't set font attributes.
+    // if (self.defaultFont) {
+    //     [str addAttribute:NSFontAttributeName value:self.defaultFont range:range];
+    // }
 
     // Add foreground color, if applicable
     UIColor *fgColor = [self foregroundColorForSyntaxFormatting:fmt];
