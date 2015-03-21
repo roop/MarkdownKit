@@ -165,6 +165,15 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
     return nil;
 }
 
+- (NSString*)currentHtml
+{
+    struct buf *ob = (_cur_ob ? _cur_ob : (_prev_ob ? _prev_ob : 0));
+    if (ob) {
+        return [[NSString alloc] initWithBytes:ob->data length:ob->size encoding:NSUTF8StringEncoding];
+    }
+    return nil;
+}
+
 + (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage
 {
     struct sd_callbacks callbacks;
