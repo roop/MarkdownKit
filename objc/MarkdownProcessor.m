@@ -15,6 +15,8 @@
 
 #define BUFFER_GROW_SIZE 1024
 
+// #define DEBUG_JS_DIFF 1
+
 @interface MarkdownProcessor () {
     SyntaxHighlightArbiter *_syntaxHighlightArbiter;
     BOOL _isLivePreviewUpdatePending;
@@ -350,6 +352,22 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
             dom_node = locateDOMNode(fromHtml->dom, toHtml->dom, common_prefix_length, diff_len, 0,
                                      traversal_info, &cumulative_content_offset);
         }
+
+#ifdef DEBUG_JS_DIFF
+        NSLog(@"\nFROM: \n\"%@\"", [[NSString alloc] initWithBytesNoCopy:fromHtml->data length:fromHtml->size encoding:NSUTF8StringEncoding freeWhenDone:false]);
+        NSLog(@"\nTO  : \n\"%@\"", [[NSString alloc] initWithBytesNoCopy:toHtml->data length:toHtml->size encoding:NSUTF8StringEncoding freeWhenDone:false]);
+
+        NSLog(@"Common prefix: \"%@\"", [[NSString alloc] initWithBytesNoCopy:toHtml->data length:common_prefix_length encoding:NSUTF8StringEncoding freeWhenDone:false]);
+        NSLog(@"Mid FROM: \"%@\"", [[NSString alloc] initWithBytesNoCopy:(fromHtml->data + common_prefix_length) length:(fromHtml->size - common_suffix_length - common_prefix_length) encoding:NSUTF8StringEncoding freeWhenDone:false]);
+        NSLog(@"Mid TO  : \"%@\"", [[NSString alloc] initWithBytesNoCopy:(toHtml->data + common_prefix_length) length:(toHtml->size - common_suffix_length - common_prefix_length) encoding:NSUTF8StringEncoding freeWhenDone:false]);
+        NSLog(@"Common suffix: \"%@\"", [[NSString alloc] initWithBytesNoCopy:(toHtml->data + toHtml->size - common_suffix_length) length:common_suffix_length encoding:NSUTF8StringEncoding freeWhenDone:false]);
+
+        if (dom_node) {
+            NSLog(@"\nTraversal info: \"%@\"", [[NSString alloc] initWithBytesNoCopy:traversal_info->data length:traversal_info->size encoding:NSUTF8StringEncoding freeWhenDone:false]);
+        } else {
+            NSLog(@"\nTraversal info: Not Found");
+        }
+#endif
     }
 
     NSMutableString *js = [[NSMutableString alloc]
@@ -409,6 +427,10 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
      "}"
      "retVal"
      ];
+
+#ifdef DEBUG_JS_DIFF
+    NSLog(@"\njs diff: \n\"%@\"", js);
+#endif
 
     bufrelease(traversal_info);
     return js;
