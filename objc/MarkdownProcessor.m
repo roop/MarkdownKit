@@ -266,6 +266,13 @@ struct dom_node *locateDOMNode(struct dom_node *from_ast, struct dom_node *ast,
                                size_t location, size_t from_len, size_t len, size_t offset,
                                struct buf *traversal, size_t *cumulative_content_offset)
 {
+    // locateDOMNode:
+    // Locates the node in the DOM such that fully contains
+    // the range (location, from_len) in the from-DOM (i.e. from_ast)
+    // and the range (location, len) in the to-DOM (i.e. ast).
+    // Returns the node as it exists in the to-DOM, and populates
+    // the traversal buffer with info on how to access it in both
+    // the from-DOM or the to-DOM (it's the same for both DOMs).
     if (from_ast == 0 || ast == 0) {
         return 0;
     }
