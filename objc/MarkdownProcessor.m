@@ -263,33 +263,32 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, N
 }
 
 struct dom_node *locateDOMNode(struct dom_node *from_ast, struct dom_node *ast,
-                               size_t location, size_t len, size_t offset,
+                               size_t location, size_t from_len, size_t len, size_t offset,
                                struct buf *traversal, size_t *cumulative_content_offset)
 {
-    if (ast == 0) {
+    if (from_ast == 0 || ast == 0) {
         return 0;
     }
-    if (ast->ambiguous_html_state == CONTAINING_AMBIGUOUS_HTML) {
+    if (from_ast->ambiguous_html_state == CONTAINING_AMBIGUOUS_HTML ||
+        ast->ambiguous_html_state == CONTAINING_AMBIGUOUS_HTML) {
         // Bad or ambiguous HTML.
         // Can't be sure how WkWebView's DOM would look like past this node.
-        return 0;
-    }
-    if (from_ast == 0 || ast == 0) {
         return 0;
     }
     if (from_ast->content_offset != ast->content_offset) {
         return 0;
     }
     size_t co = offset + ast->content_offset;
+    size_t from_co = offset + from_ast->content_offset;
     size_t to_cl = ast->content_length;
     size_t from_cl = from_ast->content_length;
     size_t cl = (from_cl < to_cl)? from_cl : to_cl;
-    if (location >= co) {
-        if ((location + len) <= (co + cl)) {
+    if (location >= co && location >= from_co) {
+        if (((location + len) <= (co + cl)) && ((location + from_len) <= (from_co + from_cl))) {
             // check children
             size_t sz = traversal->size;
             bufputc(traversal, 'C');
-            struct dom_node *node = locateDOMNode(from_ast->children, ast->children, location, len, co,
+            struct dom_node *node = locateDOMNode(from_ast->children, ast->children, location, from_len, len, co,
                                                   traversal, cumulative_content_offset);
             if (node) {
                 return node;
@@ -300,7 +299,7 @@ struct dom_node *locateDOMNode(struct dom_node *from_ast, struct dom_node *ast,
         } else {
             // check next
             bufputc(traversal, 'N');
-            return locateDOMNode(from_ast->next, ast->next, location, len, offset,
+            return locateDOMNode(from_ast->next, ast->next, location, from_len, len, offset,
                                  traversal, cumulative_content_offset);
         }
     }
@@ -342,6 +341,7 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
             }
         }
 
+        size_t from_diff_len = fromHtml->size - common_suffix_length - common_prefix_length;
         size_t diff_len = toHtml->size - common_suffix_length - common_prefix_length;
         if (diff_len == 0 && fromHtml->size == toHtml->size) {
             return @"";
@@ -349,7 +349,7 @@ static NSString* javascriptCodeToUpdateHtml(struct buf *fromHtml, struct buf *to
 
         if (!applyOnDocumentBody) {
             traversal_info = bufnew(16);
-            dom_node = locateDOMNode(fromHtml->dom, toHtml->dom, common_prefix_length, diff_len, 0,
+            dom_node = locateDOMNode(fromHtml->dom, toHtml->dom, common_prefix_length, from_diff_len, diff_len, 0,
                                      traversal_info, &cumulative_content_offset);
         }
 
