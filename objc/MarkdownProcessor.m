@@ -208,6 +208,20 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
     return htmlString;
 }
 
++ (void)describeTextStorage:(NSTextStorage *) textStorage
+{
+    [textStorage enumerateAttribute:SHL_STRING_ATTRIBUTE_NAME inRange: NSMakeRange(0, textStorage.length) options:0 usingBlock:^(id v, NSRange range, BOOL *stop) {
+        if (v) {
+            NSValue *value = v;
+            struct SyntaxHighlightData shlData;
+            [value getValue:&shlData];
+            NSLog(@"%@ SYNTAX %d TEXT %d", NSStringFromRange(range), (int) shlData.markupFormatting, (int) shlData.textFormatting);
+        } else {
+            NSLog(@"%@ nil", NSStringFromRange(range));
+        }
+    }];
+}
+
 #pragma mark - Internal methods
 
 enum JavascriptCodeError {

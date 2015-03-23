@@ -32,6 +32,8 @@
 
 + (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage;
 
++ (void)describeTextStorage:(NSTextStorage *) textStorage;
+
 @end
 
 
