@@ -20,7 +20,7 @@
 
 - (void) ensureTextRange:(NSRange)range isSyntaxHighlightedWithData:(struct SyntaxHighlightData) shlData
 {
-    NSString *shlAttributeName = @"__MDSyntaxHighlight__";
+    NSString *shlAttributeName = SHL_STRING_ATTRIBUTE_NAME;
     [self.attributedText
      enumerateAttribute:shlAttributeName inRange:range
      options:NSAttributedStringEnumerationLongestEffectiveRangeNotRequired usingBlock:^(id v, NSRange range, BOOL *stop) {

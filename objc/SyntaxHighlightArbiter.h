@@ -10,6 +10,8 @@
 #import "SyntaxHighlighter.h"
 #import "shl.h"
 
+#define SHL_STRING_ATTRIBUTE_NAME @"__MDSyntaxHighlight__"
+
 @interface SyntaxHighlightArbiter : NSObject
 
 @property (nonatomic, weak) NSMutableAttributedString *attributedText;
