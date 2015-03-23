@@ -24,11 +24,14 @@
     [self.attributedText
      enumerateAttribute:shlAttributeName inRange:range
      options:NSAttributedStringEnumerationLongestEffectiveRangeNotRequired usingBlock:^(id v, NSRange range, BOOL *stop) {
-         struct SyntaxHighlightData shlDataExisting;
-         NSValue *value = v;
-         [value getValue:&shlDataExisting];
-         BOOL shlDataChanged = ((shlDataExisting.markupFormatting != shlData.markupFormatting) ||
+         BOOL shlDataChanged = true;
+         if (v) {
+             struct SyntaxHighlightData shlDataExisting;
+             NSValue *value = v;
+             [value getValue:&shlDataExisting];
+             shlDataChanged = ((shlDataExisting.markupFormatting != shlData.markupFormatting) ||
                                 (shlDataExisting.textFormatting != shlData.textFormatting));
+         }
          if (_shouldAskSyntaxHighlighterEvenWhenUnchanged || shlDataChanged) {
              // Apply syntax highlighting
              [self.syntaxHighlighter applySyntaxHighlight:shlData inText:self.attributedText range:range];
