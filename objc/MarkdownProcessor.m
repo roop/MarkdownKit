@@ -222,6 +222,13 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
     }];
 }
 
++ (void)enumerateMarkdownAttributeInTextStorage:(NSTextStorage *)textStorage
+    inRange:(NSRange)range options:(NSAttributedStringEnumerationOptions)opts
+    usingBlock:(void (^)(id value, NSRange range, BOOL *stop))block {
+    [textStorage enumerateAttribute:SHL_STRING_ATTRIBUTE_NAME
+                            inRange:range options:opts usingBlock:block];
+}
+
 #pragma mark - Internal methods
 
 enum JavascriptCodeError {

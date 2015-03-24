@@ -33,6 +33,9 @@
 + (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage;
 
 + (void)describeTextStorage:(NSTextStorage *) textStorage;
++ (void)enumerateMarkdownAttributeInTextStorage:(NSTextStorage *)textStorage
+    inRange:(NSRange)range options:(NSAttributedStringEnumerationOptions)opts
+    usingBlock:(void (^)(id value, NSRange range, BOOL *stop))block;
 
 @end
 
