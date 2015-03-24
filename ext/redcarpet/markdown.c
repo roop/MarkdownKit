@@ -1978,19 +1978,23 @@ parse_listitem(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t s
 	struct buf *work = 0, *inter = 0;
 	size_t beg = 0, end, pre, sublist = 0, orgpre = 0, i;
 	int in_empty = 0, has_inside_empty = 0, in_fence = 0;
+	int is_ordered_list_item = 0;
 
 	/* keeping track of the first indentation prefix */
 	while (orgpre < 3 && orgpre < size && data[orgpre] == ' ')
 		orgpre++;
 
 	beg = prefix_uli(data, size);
-	if (!beg)
+	if (!beg) {
 		beg = prefix_oli(data, size);
+		is_ordered_list_item = 1;
+	}
 
 	if (!beg)
 		return 0;
 
-	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, beg, SHL_LIST_ITEM_PREFIX);
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, beg,
+											is_ordered_list_item ? SHL_ORDERED_LIST_ITEM_PREFIX : SHL_UNORDERED_LIST_ITEM_PREFIX);
 
 	/* skipping to the beginning of the following line */
 	end = beg;

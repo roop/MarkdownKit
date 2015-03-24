@@ -77,11 +77,13 @@ typedef uint16_t shl_syntax_formatting_t;
 enum {
     // Syntax formatting cannot involve font changes.
 
+    SHL_NOT_MARKUP = 0,
     SHL_ATX_HEADER_HASH = 1,
     SHL_SETEXT_HEADER_UNDERLINE,
     SHL_HORIZONTAL_RULE,
     SHL_BLOCKQUOTE_LINE_PREFIX,
-    SHL_LIST_ITEM_PREFIX,
+    SHL_UNORDERED_LIST_ITEM_PREFIX,
+    SHL_ORDERED_LIST_ITEM_PREFIX,
     SHL_CODE_FENCE,
     SHL_TABLE_BORDER,
 
@@ -121,11 +123,13 @@ enum {
 #else
 
 typedef NS_ENUM(uint16_t, MarkdownMarkup) {
+    MarkdownMarkupNone = 0,
     MarkdownMarkupAtxHeaderHash = 1,
     MarkdownMarkupSetextHeaderUnderline,
     MarkdownMarkupHorizontalRule,
     MarkdownMarkupBlockquoteLinePrefix,
-    MarkdownMarkupListItemPrefix,
+    MarkdownMarkupUnorderedListItemPrefix,
+    MarkdownMarkupOrderedListItemPrefix,
     MarkdownMarkupCodeFence,
     MarkdownMarkupTableBorder,
 
