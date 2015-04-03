@@ -35,7 +35,7 @@
 + (void)describeTextStorage:(NSTextStorage *) textStorage;
 + (void)enumerateMarkdownAttributeInTextStorage:(NSTextStorage *)textStorage
     inRange:(NSRange)range options:(NSAttributedStringEnumerationOptions)opts
-    usingBlock:(void (^)(id value, NSRange range, BOOL *stop))block;
+    usingBlock:(void (^)(NSRange range, BOOL isAttributeFound, MarkdownTextContent textType, MarkdownMarkup markupType, BOOL *stop))block;
 
 @end
 

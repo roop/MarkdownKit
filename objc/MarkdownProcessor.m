@@ -224,9 +224,19 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
 
 + (void)enumerateMarkdownAttributeInTextStorage:(NSTextStorage *)textStorage
     inRange:(NSRange)range options:(NSAttributedStringEnumerationOptions)opts
-    usingBlock:(void (^)(id value, NSRange range, BOOL *stop))block {
+    usingBlock:(void (^)(NSRange range, BOOL isAttributeFound, MarkdownTextContent textType, MarkdownMarkup markupType, BOOL *stop))block {
     [textStorage enumerateAttribute:SHL_STRING_ATTRIBUTE_NAME
-                            inRange:range options:opts usingBlock:block];
+                            inRange:range options:opts
+                         usingBlock: ^(id v, NSRange range, BOOL *stop) {
+                             if (v) {
+                                 NSValue *value = v;
+                                 struct SyntaxHighlightData shlData;
+                                 [value getValue:&shlData];
+                                 block(range, true, shlData.textFormatting, shlData.markupFormatting, stop);
+                             } else {
+                                 block(range, false, MarkdownTextContentRegular, MarkdownMarkupNone, stop);
+                             }
+                            }];
 }
 
 #pragma mark - Internal methods
