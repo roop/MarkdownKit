@@ -663,7 +663,7 @@ parse_emph1(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 				r = rndr->cb.emphasis(ob, work, rndr->opaque);
 
 			if (r)
-				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 1, SHL_EMPHASIS_CHAR); // Closing "*"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 1, SHL_EMPHASIS_CLOSE); // Closing "*"
 
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			return r ? i + 1 : 0;
@@ -707,7 +707,7 @@ parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 				r = rndr->cb.double_emphasis(ob, work, rndr->opaque);
 
 			if (r)
-				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 2, SHL_EMPHASIS_CHAR); // Closing "**"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 2, SHL_EMPHASIS_CLOSE); // Closing "**"
 
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			return r ? i + 2 : 0;
@@ -743,7 +743,7 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			r = rndr->cb.triple_emphasis(ob, work, rndr->opaque);
 
 			if (r)
-				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 3, SHL_EMPHASIS_CHAR); // Closing "***"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 3, SHL_EMPHASIS_CLOSE); // Closing "***"
 
 			rndr_popbuf(rndr, BUFFER_SPAN);
 			return r ? i + 3 : 0;
@@ -752,7 +752,7 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			/* double symbol found, handing over to emph1 */
 			len = parse_emph1(ob, rndr, data - 2, size + 2, srcmap_subtract(srcmap, 2), c, txtfmt);
 			if (len)
-				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_subtract(srcmap, 3), 1, SHL_EMPHASIS_CHAR); // Opening "*"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_subtract(srcmap, 3), 1, SHL_EMPHASIS_OPEN); // Opening "*"
 			if (!len) return 0;
 			else return len - 2;
 
@@ -760,7 +760,7 @@ parse_emph3(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 			/* single symbol found, handing over to emph2 */
 			len = parse_emph2(ob, rndr, data - 1, size + 1, srcmap_subtract(srcmap, 1), c, txtfmt);
 			if (len)
-				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_subtract(srcmap, 3), 2, SHL_EMPHASIS_CHAR); // Opening "**"
+				shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_subtract(srcmap, 3), 2, SHL_EMPHASIS_OPEN); // Opening "**"
 			if (!len) return 0;
 			else return len - 1;
 		}
@@ -786,7 +786,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 		if (c == '~' || c == '=' || _isspace(data[1]) || (ret = parse_emph1(ob, rndr, data + 1, size - 1, srcmap_add(srcmap, 1), c, txtfmt)) == 0)
 			return 0;
 
-		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_EMPHASIS_CHAR); // Opening "*"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_EMPHASIS_OPEN); // Opening "*"
 		return ret + 1;
 	}
 
@@ -794,7 +794,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 		if (_isspace(data[2]) || (ret = parse_emph2(ob, rndr, data + 2, size - 2, srcmap_add(srcmap, 2), c, txtfmt)) == 0)
 			return 0;
 
-		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 2, SHL_EMPHASIS_CHAR); // Opening "**"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 2, SHL_EMPHASIS_OPEN); // Opening "**"
 		return ret + 2;
 	}
 
@@ -802,7 +802,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 		if (c == '~' || c == '=' || _isspace(data[3]) || (ret = parse_emph3(ob, rndr, data + 3, size - 3, srcmap_add(srcmap, 3), c, txtfmt)) == 0)
 			return 0;
 
-		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 3, SHL_EMPHASIS_CHAR); // Opening "***"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 3, SHL_EMPHASIS_OPEN); // Opening "***"
 		return ret + 3;
 	}
 
@@ -848,8 +848,8 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	if (i < nb && end >= size)
 		return 0; /* no matching delimiter */
 
-	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, nb, SHL_CODE_SPAN_CHAR); // Opening backticks
-	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, end) - nb, nb, SHL_CODE_SPAN_CHAR); // Closing backticks
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, nb, SHL_CODE_SPAN_OPEN); // Opening backticks
+	shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, end) - nb, nb, SHL_CODE_SPAN_CLOSE); // Closing backticks
 
 	/* trimming outside whitespaces */
 	f_begin = nb;

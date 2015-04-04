@@ -87,8 +87,10 @@ enum {
     SHL_CODE_FENCE,
     SHL_TABLE_BORDER,
 
-    SHL_EMPHASIS_CHAR,
-    SHL_CODE_SPAN_CHAR,
+    SHL_EMPHASIS_OPEN,
+    SHL_EMPHASIS_CLOSE,
+    SHL_CODE_SPAN_OPEN,
+    SHL_CODE_SPAN_CLOSE,
 
     SHL_LINK_OR_IMG_SYNTAX,
     SHL_LINK_OR_IMG_REF,
@@ -133,8 +135,10 @@ typedef NS_ENUM(uint16_t, MarkdownMarkup) {
     MarkdownMarkupCodeFence,
     MarkdownMarkupTableBorder,
 
-    MarkdownMarkupEmphasisChar,
-    MarkdownMarkupCodeSpanChar,
+    MarkdownMarkupEmphasisOpen,
+    MarkdownMarkupEmphasisClose,
+    MarkdownMarkupCodeSpanOpen,
+    MarkdownMarkupCodeSpanClose,
 
     MarkdownMarkupLinkOrImageSyntax,
     MarkdownMarkupLinkOrImageRef,
