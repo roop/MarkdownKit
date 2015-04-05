@@ -239,6 +239,27 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
                             }];
 }
 
++ (void)markdownAttributeAtIndex:(NSUInteger)index ofTextStorage:(NSTextStorage *)textStorage
+                        isAttributeFound:(BOOL *)found
+                        textType:(MarkdownTextContent *)textType markupType:(MarkdownMarkup *) markupType
+{
+    id v = [textStorage attribute:SHL_STRING_ATTRIBUTE_NAME atIndex:index effectiveRange:nil];
+    if (v) {
+        NSValue *value = v;
+        struct SyntaxHighlightData shlData;
+        [value getValue:&shlData];
+        if (found)
+            (*found) = true;
+        if (textType)
+            (*textType) = shlData.textFormatting;
+        if (markupType)
+            (*markupType) = shlData.markupFormatting;
+    } else {
+        if (found)
+            (*found) = false;
+    }
+}
+
 #pragma mark - Internal methods
 
 enum JavascriptCodeError {
