@@ -11,6 +11,7 @@
 
 #include "buffer.h"
 #include "stack.h"
+#include "markdown.h"
 
 #define REF_TABLE_SIZE 8
 
@@ -21,6 +22,8 @@
 /* link_ref: reference to a link */
 struct link_ref {
     unsigned int id;
+
+    size_t ref_name_srcmap_pos, ref_name_srcmap_len;
 
     struct buf *link;
     struct buf *title;

@@ -2899,6 +2899,9 @@ is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_re
 		if (!ref)
 			return 0;
 
+		ref->ref_name_srcmap_pos = sp_id_begin;
+		ref->ref_name_srcmap_len = sp_id_end - sp_id_begin;
+
 		ref->link = bufnew(link_end - link_offset);
 		bufput(ref->link, data + link_offset, link_end - link_offset);
 
