@@ -11,6 +11,7 @@
 
 #import "shl.h"
 #import "SyntaxHighlighter.h"
+#import "MarkdownLinkRefs.h"
 
 @protocol LivePreviewDelegate;
 @protocol SyntaxHighlightDelegate;
@@ -20,15 +21,20 @@
 @property (nonatomic, strong) SyntaxHighlighter* syntaxHighlighter;
 @property (nonatomic, weak) id<LivePreviewDelegate> livePreviewDelegate;
 
+- (void) willReplaceTextInRange:(NSRange)range ofTextStorage:(NSTextStorage *)textStorage;
+
 - (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview;
 - (void) processMarkdownInTextStorage: (NSTextStorage *) textStorage
+                          editedRange: (NSRange)editedRange
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview
            alignPreviewToTextPosition: (NSInteger)position;
 
 - (NSString*)currentHtmlWithEscapedNewlines;
+
+- (MarkdownLinkRefs *)linkRefs;
 
 + (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage;
 

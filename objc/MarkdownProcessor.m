@@ -21,9 +21,14 @@
     SyntaxHighlightArbiter *_syntaxHighlightArbiter;
     BOOL _isLivePreviewUpdatePending;
     NSInteger _effectiveEditorCursorPos;
+    struct sd_markdown *_md;
     struct buf *_prev_ob, *_cur_ob;
+
+    NSTextStorage *_textStorage;
+    MarkdownLinkRefs *_linkRefs;
 }
 
+- (void)handleChangeInTextRange:(NSRange)range;
 - (void) updateLivePreview;
 
 @end
@@ -40,8 +45,17 @@
         _effectiveEditorCursorPos = -1;
         _prev_ob = 0;
         _cur_ob = 0;
+        _md = 0;
+        _linkRefs = 0;
     }
     return self;
+}
+
+- (void) willReplaceTextInRange:(NSRange)range ofTextStorage:(NSTextStorage *)textStorage
+{
+    if (textStorage == _textStorage) {
+        [self handleChangeInTextRange:range];
+    }
 }
 
 - (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage
@@ -49,12 +63,15 @@
                         updatePreview: (BOOL)shouldUpdatePreview
 {
     [self processMarkdownInTextStorage:textStorage
+                           editedRange: NSMakeRange(NSNotFound, 0)
               syntaxHighlightCallbacks:shouldSyntaxHighlight
                          updatePreview:shouldUpdatePreview
             alignPreviewToTextPosition: -1];
+    [self linkRefs];
 }
 
 - (void) processMarkdownInTextStorage: (NSTextStorage *) textStorage
+                          editedRange: (NSRange)editedRange
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview
            alignPreviewToTextPosition: (NSInteger)position;
@@ -65,6 +82,11 @@
     }
     _syntaxHighlightArbiter.syntaxHighlighter = self.syntaxHighlighter;
     _syntaxHighlightArbiter.attributedText = textStorage;
+
+    if (_md) {
+        sd_markdown_free(_md);
+        _md = 0;
+    }
 
     struct sd_callbacks callbacks;
     struct html_renderopt options;
@@ -96,10 +118,15 @@
                                   );
     markdown = sd_markdown_new(md_extensions, 16, &callbacks, &options,
                                shouldSyntaxHighlight ? (__bridge void *) _syntaxHighlightArbiter : nil);
-
     sd_markdown_render(ob, ib->data, ib->size, markdown); // Would make calls on the syntaxHighlightArbiter internally
-    sd_markdown_free(markdown);
     bufrelease(ib);
+
+    _md = markdown;
+    _textStorage = textStorage;
+
+    if (editedRange.location != NSNotFound) {
+        [self handleChangeInTextRange:editedRange];
+    }
 
     if (!shouldUpdatePreview || _livePreviewDelegate == nil) {
         return;
@@ -172,6 +199,58 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
         return [[NSString alloc] initWithBytes:ob->data length:ob->size encoding:NSUTF8StringEncoding];
     }
     return nil;
+}
+
+- (void)handleChangeInTextRange:(NSRange)range
+{
+    if (_textStorage == nil || range.length == 0) {
+        return;
+    }
+    if (_linkRefs == nil) {
+        // No need to invalidate link refs - they're already invalidated
+        return;
+    }
+    __block BOOL shouldInvalidateLinkRefs = NO;
+    [MarkdownProcessor enumerateMarkdownAttributeInTextStorage:_textStorage inRange:range
+                        options:NSAttributedStringEnumerationLongestEffectiveRangeNotRequired
+                        usingBlock:
+     ^(NSRange range, BOOL isAttributeFound, MarkdownTextContent textType, MarkdownMarkup markupType, BOOL *stop) {
+         if (isAttributeFound) {
+             switch(markupType) {
+                 case MarkdownMarkupRefDefinitionRef:
+                 case MarkdownMarkupRefDefinitionRefEnclosure:
+                 case MarkdownMarkupRefDefinitionURL:
+                 case MarkdownMarkupRefDefinitionURLEnclosure:
+                 case MarkdownMarkupRefDefinitionTitle:
+                 case MarkdownMarkupRefDefinitionTitleQuotes:
+                     shouldInvalidateLinkRefs = YES;
+                     break;
+                 default:
+                     break;
+             }
+         }
+         if (shouldInvalidateLinkRefs) {
+             (*stop) = true;
+         }
+     }];
+    if (shouldInvalidateLinkRefs) {
+        [self invalidateLinkRefs];
+    }
+}
+
+- (MarkdownLinkRefs *)linkRefs
+{
+    if (_linkRefs == nil) {
+        if (_md) {
+            _linkRefs = [[MarkdownLinkRefs alloc] initWithText:_textStorage.string markdownData:_md];
+        }
+    }
+    return _linkRefs;
+}
+
+- (void)invalidateLinkRefs
+{
+    _linkRefs = nil;
 }
 
 + (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage
@@ -565,6 +644,10 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, N
         bufreleasedom(_cur_ob);
         bufrelease(_cur_ob);
         _cur_ob = 0;
+    }
+    if (_md) {
+        sd_markdown_free(_md);
+        _md = 0;
     }
     bufreleasedom(_prev_ob);
     bufrelease(_prev_ob);

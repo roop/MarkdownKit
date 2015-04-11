@@ -3114,7 +3114,7 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 
 	/* clean-up */
 	bufrelease(text);
-	free_link_refs(md->refs);
+	// free_link_refs(md->refs); // roop: Freed in sd_markdown_free()
 	if (footnotes_enabled) {
 		free_footnote_list(&md->footnotes_found, 1);
 		free_footnote_list(&md->footnotes_used, 0);
@@ -3138,6 +3138,7 @@ sd_markdown_free(struct sd_markdown *md)
 	redcarpet_stack_free(&md->work_bufs[BUFFER_SPAN]);
 	redcarpet_stack_free(&md->work_bufs[BUFFER_BLOCK]);
 
+	free_link_refs(md->refs);
 	free(md);
 }
 
