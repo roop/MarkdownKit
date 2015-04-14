@@ -64,4 +64,21 @@
     return _refNameURLDictionary;
 }
 
++ (NSRange)rangeOfRefInDefinitionOfLinkRefName:(NSString *)refName usingText:(NSString *)text
+                               andMarkdownData:(struct sd_markdown *)markdown_data
+{
+    for (int i = 0; i < REF_TABLE_SIZE; i++) {
+        struct link_ref *ref = markdown_data->refs[i];
+        while (ref != 0) {
+            NSRange rangeInText = NSMakeRange(ref->ref_name_srcmap_pos, ref->ref_name_srcmap_len);
+            NSString *refNameOfRef = [text substringWithRange:rangeInText];
+            if ([refNameOfRef caseInsensitiveCompare:refName] == NSOrderedSame) {
+                return rangeInText;
+            }
+            ref = ref->next;
+        }
+    }
+    return NSMakeRange(NSNotFound, 0);
+}
+
 @end

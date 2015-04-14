@@ -253,6 +253,16 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
     _linkRefs = nil;
 }
 
+- (NSRange)rangeOfRefInDefinitionOfLinkRefName:(NSString *)refName
+{
+    if (_md) {
+        NSRange rangeOfRef = [MarkdownLinkRefs rangeOfRefInDefinitionOfLinkRefName:refName
+                                               usingText:_textStorage.string andMarkdownData:_md];
+        return rangeOfRef;
+    }
+    return NSMakeRange(NSNotFound, 0);
+}
+
 + (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage
 {
     struct sd_callbacks callbacks;

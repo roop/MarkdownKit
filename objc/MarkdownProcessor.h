@@ -35,6 +35,7 @@
 - (NSString*)currentHtmlWithEscapedNewlines;
 
 - (MarkdownLinkRefs *)linkRefs;
+- (NSRange)rangeOfRefInDefinitionOfLinkRefName:(NSString *)refName;
 
 + (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage;
 

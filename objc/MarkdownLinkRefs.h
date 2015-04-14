@@ -16,4 +16,7 @@
 - (NSArray *)refNames;
 - (NSDictionary*)refNameURLDictionary;
 
++ (NSRange)rangeOfRefInDefinitionOfLinkRefName:(NSString *)refName usingText:(NSString *)text
+                               andMarkdownData:(struct sd_markdown *)markdown_data;
+
 @end
