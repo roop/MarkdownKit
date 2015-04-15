@@ -641,7 +641,7 @@ void scrollLivePreviewToEditPoint(id<LivePreviewDelegate> livePreviewDelegate, N
         CGFloat yDiff = (editorCursorY - previewCursorY);
         if ((previewCursorY < 0) ||
             (previewCursorY > (editorHeight - editorLineHeight)) || // FIXME: Assuming preview is same height as editor
-            (abs(yDiff) > (editorLineHeight * 4))) {
+            (fabs(yDiff) > (editorLineHeight * 4))) {
             [livePreviewDelegate scrollVerticallyBy:yDiff];
         }
     }];
