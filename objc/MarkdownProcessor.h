@@ -23,10 +23,10 @@
 
 - (void) willReplaceTextInRange:(NSRange)range ofAttributedString:(NSAttributedString *)attrString;
 
-- (void) processMarkdownInTextStorage:(NSTextStorage *)textStorage
+- (void) processMarkdownInAttributedString:(NSMutableAttributedString *)attrString
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview;
-- (void) processMarkdownInTextStorage: (NSTextStorage *)textStorage
+- (void) processMarkdownInAttributedString:(NSMutableAttributedString *)attrString
                           editedRange: (NSRange)editedRange
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview

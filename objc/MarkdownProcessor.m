@@ -24,7 +24,7 @@
     struct sd_markdown *_md;
     struct buf *_prev_ob, *_cur_ob;
 
-    NSTextStorage *_textStorage;
+    NSMutableAttributedString *_textStorage;
     MarkdownLinkRefs *_linkRefs;
 }
 
@@ -58,11 +58,11 @@
     }
 }
 
-- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage
+- (void) processMarkdownInAttributedString:(NSMutableAttributedString *) textStorage
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview
 {
-    [self processMarkdownInTextStorage:textStorage
+    [self processMarkdownInAttributedString:textStorage
                            editedRange: NSMakeRange(NSNotFound, 0)
               syntaxHighlightCallbacks:shouldSyntaxHighlight
                          updatePreview:shouldUpdatePreview
@@ -70,7 +70,7 @@
     [self linkRefs];
 }
 
-- (void) processMarkdownInTextStorage: (NSTextStorage *) textStorage
+- (void) processMarkdownInAttributedString: (NSMutableAttributedString *) textStorage
                           editedRange: (NSRange)editedRange
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview
