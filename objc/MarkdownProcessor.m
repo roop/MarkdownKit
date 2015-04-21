@@ -51,7 +51,7 @@
     return self;
 }
 
-- (void) willReplaceTextInRange:(NSRange)range ofTextStorage:(NSTextStorage *)textStorage
+- (void) willReplaceTextInRange:(NSRange)range ofAttributedString:(NSAttributedString *)textStorage
 {
     if (textStorage == _textStorage) {
         [self handleChangeInTextRange:range];
@@ -211,7 +211,7 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
         return;
     }
     __block BOOL shouldInvalidateLinkRefs = NO;
-    [MarkdownProcessor enumerateMarkdownAttributeInTextStorage:_textStorage inRange:range
+    [MarkdownProcessor enumerateMarkdownAttributeInAttributedString:_textStorage inRange:range
                         options:NSAttributedStringEnumerationLongestEffectiveRangeNotRequired
                         usingBlock:
      ^(NSRange range, BOOL isAttributeFound, MarkdownTextContent textType, MarkdownMarkup markupType, BOOL *stop) {
@@ -263,13 +263,13 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
     return NSMakeRange(NSNotFound, 0);
 }
 
-+ (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage
++ (NSString*)htmlForMarkdown:(NSString *) string
 {
     struct sd_callbacks callbacks;
     struct html_renderopt options;
     struct sd_markdown *markdown;
 
-    const char *cstring = [textStorage.string UTF8String];
+    const char *cstring = [string UTF8String];
     struct buf *ib = bufnew(BUFFER_GROW_SIZE);
     bufputs(ib, cstring);
 
@@ -297,9 +297,9 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
     return htmlString;
 }
 
-+ (void)describeTextStorage:(NSTextStorage *) textStorage
++ (void)describeMarkdownAttributedString:(NSAttributedString *)attrString
 {
-    [textStorage enumerateAttribute:SHL_STRING_ATTRIBUTE_NAME inRange: NSMakeRange(0, textStorage.length) options:0 usingBlock:^(id v, NSRange range, BOOL *stop) {
+    [attrString enumerateAttribute:SHL_STRING_ATTRIBUTE_NAME inRange: NSMakeRange(0, attrString.length) options:0 usingBlock:^(id v, NSRange range, BOOL *stop) {
         if (v) {
             NSValue *value = v;
             struct SyntaxHighlightData shlData;
@@ -311,10 +311,10 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
     }];
 }
 
-+ (void)enumerateMarkdownAttributeInTextStorage:(NSTextStorage *)textStorage
++ (void)enumerateMarkdownAttributeInAttributedString:(NSAttributedString *)attrString
     inRange:(NSRange)range options:(NSAttributedStringEnumerationOptions)opts
     usingBlock:(void (^)(NSRange range, BOOL isAttributeFound, MarkdownTextContent textType, MarkdownMarkup markupType, BOOL *stop))block {
-    [textStorage enumerateAttribute:SHL_STRING_ATTRIBUTE_NAME
+    [attrString enumerateAttribute:SHL_STRING_ATTRIBUTE_NAME
                             inRange:range options:opts
                          usingBlock: ^(id v, NSRange range, BOOL *stop) {
                              if (v) {
@@ -328,11 +328,11 @@ static void appendHtmlToString(NSMutableString *str, uint8_t* data, size_t lengt
                             }];
 }
 
-+ (void)markdownAttributeAtIndex:(NSUInteger)index ofTextStorage:(NSTextStorage *)textStorage
++ (void)markdownAttributeAtIndex:(NSUInteger)index ofAttributedString:(NSAttributedString *)attrString
                         isAttributeFound:(BOOL *)found
                         textType:(MarkdownTextContent *)textType markupType:(MarkdownMarkup *) markupType
 {
-    id v = [textStorage attribute:SHL_STRING_ATTRIBUTE_NAME atIndex:index effectiveRange:nil];
+    id v = [attrString attribute:SHL_STRING_ATTRIBUTE_NAME atIndex:index effectiveRange:nil];
     if (v) {
         NSValue *value = v;
         struct SyntaxHighlightData shlData;

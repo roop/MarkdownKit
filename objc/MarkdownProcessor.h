@@ -21,12 +21,12 @@
 @property (nonatomic, strong) SyntaxHighlighter* syntaxHighlighter;
 @property (nonatomic, weak) id<LivePreviewDelegate> livePreviewDelegate;
 
-- (void) willReplaceTextInRange:(NSRange)range ofTextStorage:(NSTextStorage *)textStorage;
+- (void) willReplaceTextInRange:(NSRange)range ofAttributedString:(NSAttributedString *)attrString;
 
-- (void) processMarkdownInTextStorage:(NSTextStorage *) textStorage
+- (void) processMarkdownInTextStorage:(NSTextStorage *)textStorage
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview;
-- (void) processMarkdownInTextStorage: (NSTextStorage *) textStorage
+- (void) processMarkdownInTextStorage: (NSTextStorage *)textStorage
                           editedRange: (NSRange)editedRange
              syntaxHighlightCallbacks: (BOOL)shouldSyntaxHighlight
                         updatePreview: (BOOL)shouldUpdatePreview
@@ -37,13 +37,13 @@
 - (MarkdownLinkRefs *)linkRefs;
 - (NSRange)rangeOfRefInDefinitionOfLinkRefName:(NSString *)refName;
 
-+ (NSString*)htmlForMarkdownInTextStorage:(NSTextStorage *) textStorage;
++ (NSString*)htmlForMarkdown:(NSString *)markdownString;
 
-+ (void)describeTextStorage:(NSTextStorage *) textStorage;
-+ (void)enumerateMarkdownAttributeInTextStorage:(NSTextStorage *)textStorage
++ (void)describeMarkdownAttributedString:(NSAttributedString *)attrString;
++ (void)enumerateMarkdownAttributeInAttributedString:(NSAttributedString *)attrString
     inRange:(NSRange)range options:(NSAttributedStringEnumerationOptions)opts
     usingBlock:(void (^)(NSRange range, BOOL isAttributeFound, MarkdownTextContent textType, MarkdownMarkup markupType, BOOL *stop))block;
-+ (void)markdownAttributeAtIndex:(NSUInteger)index ofTextStorage:(NSTextStorage *)textStorage
++ (void)markdownAttributeAtIndex:(NSUInteger)index ofAttributedString:(NSAttributedString *)attrString
     isAttributeFound:(BOOL *)found textType:(MarkdownTextContent *)textType markupType:(MarkdownMarkup *) markupType;
 
 @end
