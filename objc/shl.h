@@ -92,13 +92,19 @@ enum {
     SHL_CODE_SPAN_OPEN,
     SHL_CODE_SPAN_CLOSE,
 
-    SHL_LINK_OR_IMG_SYNTAX,
+    SHL_LINKED_TEXT_ENCLOSURE,
+    SHL_IMG_ALT_TEXT,
+    SHL_IMG_ALT_ENCLOSURE,
+
+    SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE,
+    SHL_LINK_OR_IMG_INLINE_URL,
+    SHL_LINK_OR_IMG_INLINE_URL_ENCLOSURE,
+    SHL_LINK_OR_IMG_INLINE_TITLE,
+    SHL_LINK_OR_IMG_INLINE_TITLE_QUOTES,
+
     SHL_LINK_OR_IMG_REF,
     SHL_LINK_OR_IMG_REF_ENCLOSURE,
-    SHL_LINK_OR_IMG_URL,
-    SHL_LINK_OR_IMG_TITLE,
-    SHL_LINK_OR_IMG_TITLE_QUOTES,
-    SHL_IMG_ALT_TEXT,
+
     SHL_AUTOLINK_ANGLE_BRACKETS,
     SHL_AUTOLINKED_URL,
 
@@ -140,13 +146,19 @@ typedef NS_ENUM(uint16_t, MarkdownMarkup) {
     MarkdownMarkupCodeSpanOpen,
     MarkdownMarkupCodeSpanClose,
 
-    MarkdownMarkupLinkOrImageSyntax,
+    MarkdownMarkupLinkedTextEnclosure,
+    MarkdownMarkupImageAltText,
+    MarkdownMarkupImageAltEnclosure,
+
+    MarkdownMarkupLinkOrImageInlineDataEnclosure,
+    MarkdownMarkupLinkOrImageInlineURL,
+    MarkdownMarkupLinkOrImageInlineURLEnclosure,
+    MarkdownMarkupLinkOrImageInlineTitle,
+    MarkdownMarkupLinkOrImageInlineTitleQuotes,
+
     MarkdownMarkupLinkOrImageRef,
     MarkdownMarkupLinkOrImageRefEnclosure,
-    MarkdownMarkupLinkOrImageURL,
-    MarkdownMarkupLinkOrImageTitle,
-    MarkdownMarkupLinkOrImageTitleQuotes,
-    MarkdownMarkupImageAltText,
+
     MarkdownMarkupAutolinkAngleBrackets,
     MarkdownMarkupAutolinkedURL,
 

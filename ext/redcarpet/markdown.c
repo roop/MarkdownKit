@@ -1176,8 +1176,8 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 			}
 		}
 
-		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, open_parens_pos), 1, SHL_LINK_OR_IMG_SYNTAX); // "("
-		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 1, SHL_LINK_OR_IMG_SYNTAX); // ")"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, open_parens_pos), 1, SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE); // "("
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 1, SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE); // ")"
 
 		/* remove whitespace at the end of the link */
 		while (link_e > link_b && _isspace(data[link_e - 1]))
@@ -1185,11 +1185,11 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 		/* remove optional angle brackets around the link */
 		if (data[link_b] == '<') {
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_b), 1, SHL_LINK_OR_IMG_SYNTAX); // <
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_b), 1, SHL_LINK_OR_IMG_INLINE_URL_ENCLOSURE); // <
 			link_b++;
 		}
 		if (data[link_e - 1] == '>') {
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_e) - 1, 1, SHL_LINK_OR_IMG_SYNTAX); // >
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_e) - 1, 1, SHL_LINK_OR_IMG_INLINE_URL_ENCLOSURE); // >
 			link_e--;
 		}
 
@@ -1197,15 +1197,15 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		if (link_e > link_b) {
 			link = rndr_newbuf(rndr, BUFFER_SPAN);
 			bufput(link, data + link_b, link_e - link_b);
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_b), link_e - link_b, SHL_LINK_OR_IMG_URL);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_b), link_e - link_b, SHL_LINK_OR_IMG_INLINE_URL);
 		}
 
 		if (title_e > title_b) {
 			title = rndr_newbuf(rndr, BUFFER_SPAN);
 			bufput(title, data + title_b, title_e - title_b);
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_b) - 1, 1, SHL_LINK_OR_IMG_TITLE_QUOTES); // " or '
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_b), title_e - title_b, SHL_LINK_OR_IMG_TITLE);
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_e), 1, SHL_LINK_OR_IMG_TITLE_QUOTES); // " or '
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_b) - 1, 1, SHL_LINK_OR_IMG_INLINE_TITLE_QUOTES); // " or '
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_b), title_e - title_b, SHL_LINK_OR_IMG_INLINE_TITLE);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_e), 1, SHL_LINK_OR_IMG_INLINE_TITLE_QUOTES); // " or '
 		}
 
 		i++;
@@ -1303,17 +1303,17 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		content = rndr_newbuf(rndr, BUFFER_SPAN);
 		if (is_img) {
 			bufput(content, data + 1, txt_e - 1);
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_subtract(srcmap, 1), 2, SHL_LINK_OR_IMG_SYNTAX); // "!["
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_subtract(srcmap, 1), 2, SHL_IMG_ALT_ENCLOSURE); // "!["
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, 1), txt_e - 1, SHL_IMG_ALT_TEXT);
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_IMG_ALT_ENCLOSURE); // "]"
 		} else {
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_LINK_OR_IMG_SYNTAX); // "["
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_LINKED_TEXT_ENCLOSURE); // "["
 			/* disable autolinking when parsing inline the
 			 * content of a link */
 			rndr->in_link_body = 1;
 			parse_inline(content, rndr, data + 1, txt_e - 1, srcmap_add(srcmap, 1), txtfmt | SHL_LINKED_CONTENT);
 			rndr->in_link_body = 0;
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_LINK_OR_IMG_SYNTAX); // "]"
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_LINKED_TEXT_ENCLOSURE); // "]"
 		}
 	}
 
