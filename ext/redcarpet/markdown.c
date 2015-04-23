@@ -1050,6 +1050,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 	size_t org_work_size = rndr->work_bufs[BUFFER_SPAN].size;
 	int text_has_nl = 0, ret = 0;
 	int in_title = 0, qtype = 0;
+	int is_empty_or_missing_ref = 0;
 
 	/* checking whether the correct renderer exists */
 	if ((is_img && !rndr->cb.image) || (!is_img && !rndr->cb.link))
@@ -1225,7 +1226,8 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 		/* finding the link_ref */
 		if (link_b == link_e) {
-			if (text_has_nl) {
+			is_empty_or_missing_ref = 1;
+			if (text_has_nl) { // "[linked\n text][]"
 				struct buf *b = rndr_newbuf(rndr, BUFFER_SPAN);
 				size_t j;
 
@@ -1238,16 +1240,78 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 
 				id.data = b->data;
 				id.size = b->size;
-			} else {
+			} else { // "[linked text][]"
 				id.data = data + 1;
 				id.size = txt_e - 1;
 			}
-		} else {
+		} else { // "[linked text][ref]"
 			id.data = data + link_b;
 			id.size = link_e - link_b;
 		}
 
 		lr = find_link_ref(rndr->refs, id.data, id.size);
+		if (!lr && !is_empty_or_missing_ref) {
+			// "[linked text][undefined ref]"
+			int is_active_char_found = 0;
+			{
+				// Look for an active_char in the would-be linked-text and the ref.
+				// Done in a separate block to localize the scope of 'i'.
+				size_t i;
+				for (i = 1; i < txt_e; i++) { // Search linked-text
+					if (rndr->active_char[data[i]] != MD_CHAR_NONE) {
+						is_active_char_found = 1;
+						break;
+					}
+				}
+				if (!is_active_char_found) { // Search ref
+					for (i = link_b; i < link_e; i++) {
+						if (rndr->active_char[data[i]] != MD_CHAR_NONE) {
+							is_active_char_found = 1;
+							break;
+						}
+					}
+				}
+			}
+			if (!is_active_char_found) {
+				assert(link_e > link_b);
+				// If no active char is found in "[linked text][undefined ref]",
+				// there's no way for it to be interepreted differently
+				// (like "[linked *text][undef* ref]" can be).
+				//
+				// So, we will treat:
+				//   - "linked text" as SHL_POTENTIALLY_LINKED_CONTENT_REF_UNDEFINED
+				//   - "undefined ref" as SHL_LINK_OR_IMG_REF_UNDEFINED
+
+				if (txt_e > 1) {
+					// Apply syntax highlight
+					if (is_img) {
+						shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_subtract(srcmap, 1), 2, SHL_IMG_ALT_ENCLOSURE); // "!["
+						shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, 1), txt_e - 1, SHL_POTENTIAL_IMG_ALT_TEXT_REF_UNDEFINED);
+						shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_IMG_ALT_ENCLOSURE); // "]"
+					} else {
+						shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_LINKED_TEXT_ENCLOSURE); // "["
+						shl_apply_text_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, 1), txt_e - 1,
+															  (txtfmt | SHL_POTENTIALLY_LINKED_CONTENT_WITH_REF_UNDEFINED));
+						shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_LINKED_TEXT_ENCLOSURE); // "]"
+					}
+					shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_b) - 1, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "["
+					shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_b), link_e - link_b, SHL_LINK_OR_IMG_REF_UNDEFINED);
+					shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_e), 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "]"
+					// Render as normal text
+					if (is_img) {
+						if (ob->size && ob->data[ob->size - 1] == '!')
+							ob->size -= 1;
+					}
+					struct buf tmp = { data, i + 1, i + 1, 0, 0, 0 };
+					rndr->cb.normal_text(ob, &tmp, rndr->opaque, srcmap);
+					// Ensure correct return value
+					i++;
+					ret = 1;
+					// Done
+					goto cleanup;
+				}
+			}
+		}
 		if (!lr)
 			goto cleanup;
 
@@ -1265,6 +1329,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 	else {
 		struct buf id = { 0, 0, 0, 0, 0, 0, 0 };
 		struct link_ref *lr;
+		is_empty_or_missing_ref = 1;
 
 		/* crafting the id */
 		if (text_has_nl) {
@@ -1311,7 +1376,8 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 			/* disable autolinking when parsing inline the
 			 * content of a link */
 			rndr->in_link_body = 1;
-			parse_inline(content, rndr, data + 1, txt_e - 1, srcmap_add(srcmap, 1), txtfmt | SHL_LINKED_CONTENT);
+			shl_text_formatting_t linkfmt = (is_empty_or_missing_ref ? SHL_LINKED_REF_CONTENT : SHL_LINKED_CONTENT);
+			parse_inline(content, rndr, data + 1, txt_e - 1, srcmap_add(srcmap, 1), txtfmt | linkfmt);
 			rndr->in_link_body = 0;
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_LINKED_TEXT_ENCLOSURE); // "]"
 		}

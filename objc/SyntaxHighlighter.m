@@ -140,14 +140,14 @@ static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSStr
         case MarkdownMarkupAutolinkedURL:
             return [UIColor blueColor];
 
-        case MarkdownMarkupLinkOrImageURL:
+        case MarkdownMarkupLinkOrImageInlineURL:
         case MarkdownMarkupRefDefinitionURL:
             return [self dimmedBlueColor];
 
         case MarkdownMarkupImageAltText:
             return [UIColor purpleColor];
 
-        case MarkdownMarkupLinkOrImageTitle:
+        case MarkdownMarkupLinkOrImageInlineTitle:
         case MarkdownMarkupRefDefinitionTitle:
             return [UIColor grayColor];
 
@@ -173,7 +173,8 @@ static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSStr
 
 - (UIColor *) foregroundColorForTextFormatting:(MarkdownTextContent) fmt
 {
-    if ((fmt & MarkdownTextContentLinked) == MarkdownTextContentLinked) {
+    if (((fmt & MarkdownTextContentLinked) == MarkdownTextContentLinked) ||
+	    ((fmt & MarkdownTextContentLinked) == MarkdownTextContentLinkedRef)){
         return [UIColor blueColor];
     }
     return nil;
