@@ -45,6 +45,9 @@
     usingBlock:(void (^)(NSRange range, BOOL isAttributeFound, MarkdownTextContent textType, MarkdownMarkup markupType, BOOL *stop))block;
 + (void)markdownAttributeAtIndex:(NSUInteger)index ofAttributedString:(NSAttributedString *)attrString
     isAttributeFound:(BOOL *)found textType:(MarkdownTextContent *)textType markupType:(MarkdownMarkup *) markupType;
++ (void)markdownAttributeAtIndex:(NSUInteger)index ofAttributedString:(NSAttributedString *)attrString
+    isAttributeFound:(BOOL *)found textType:(MarkdownTextContent *)textType markupType:(MarkdownMarkup *) markupType
+    longestEffectiveRange:(NSRangePointer)rangePointer;
 
 @end
 
