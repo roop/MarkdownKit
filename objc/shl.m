@@ -11,11 +11,14 @@
 #include "MarkdownProcessor.h"
 #include "SyntaxHighlightArbiter.h"
 
+//#define DEBUG_SYNTAX_HIGHLIGHT_DATA 1
+
+#ifdef DEBUG_SYNTAX_HIGHLIGHT_DATA
 static void describeSyntaxHighlightData(const struct SyntaxHighlightData *shlData) {
 	if (shlData->markupFormatting > 0) {
-		printf("Markup\n");
+		printf("Markup %d\n", (int) shlData->markupFormatting);
 	} else {
-		printf("Text ");
+		printf("Text 0x%x ", shlData->textFormatting);
 		if (shlData->textFormatting & MarkdownTextContentEmphasized) { printf("Emphasized "); }
 		if (shlData->textFormatting & MarkdownTextContentStrong) { printf("Strong "); }
 		if (shlData->textFormatting & MarkdownTextContentUnderlined) { printf("Underlined "); }
@@ -32,6 +35,7 @@ static void describeSyntaxHighlightData(const struct SyntaxHighlightData *shlDat
 		printf("\n");
 	}
 }
+#endif
 
 static void shl_apply_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t length, uint16_t fmt, bool isTextFormatting)
 {
@@ -63,6 +67,10 @@ static void shl_apply_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t
 					assert(begin >= 0);
 					if (prev_sm >= begin) {
 						NSRange stringRange = NSMakeRange(begin, prev_sm - begin + 1);
+#ifdef DEBUG_SYNTAX_HIGHLIGHT_DATA
+						printf("Range (%d, %d): ", (int) stringRange.location, (int) stringRange.length);
+						describeSyntaxHighlightData(&shlData);
+#endif
 						[shlArbiter ensureTextRange:stringRange isSyntaxHighlightedWithData:shlData];
 						begin = sm;
 					}
@@ -74,8 +82,10 @@ static void shl_apply_formatting_with_srcmap(void *shl, srcmap_t* srcmap, size_t
 
 	if (begin >= 0 && prev_sm >= begin) {
 		NSRange stringRange = NSMakeRange(begin, prev_sm - begin + 1);
-		// printf("Range (%d, %d): ", (int) stringRange.location, (int) stringRange.length);
-		// describeSyntaxHighlightData(&shlData);
+#ifdef DEBUG_SYNTAX_HIGHLIGHT_DATA
+		 printf("Range (%d, %d): ", (int) stringRange.location, (int) stringRange.length);
+		 describeSyntaxHighlightData(&shlData);
+#endif
 		[shlArbiter ensureTextRange:stringRange isSyntaxHighlightedWithData:shlData];
 	}
 }
