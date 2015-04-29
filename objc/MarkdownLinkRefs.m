@@ -12,6 +12,7 @@
 @interface MarkdownLinkRefs () {
     NSArray *_refNames;
     NSDictionary *_refNameURLDictionary;
+    NSArray *_refNamesDefinedButNotUsed;
 }
 
 @end
@@ -25,6 +26,7 @@
         NSMutableArray *refNames = [[NSMutableArray alloc] init];
         NSMutableSet *refURLs;
         NSMutableDictionary *refURLForName = [[NSMutableDictionary alloc] init];
+        NSMutableArray *refNamesDefinedButNotUsed = [[NSMutableArray alloc] init];
         for (int i = 0; i < REF_TABLE_SIZE; i++) {
             struct link_ref *ref = markdown_data->refs[i];
             while (ref != 0) {
@@ -43,6 +45,9 @@
                 [refNames insertObject:refName atIndex:insertionIndex];
                 [refURLs addObject:linkURLStr];
                 [refURLForName setValue:linkURLStr forKey:refName];
+                if (!ref->is_used) {
+                    [refNamesDefinedButNotUsed addObject:refName];
+                }
                 // Move ahead in the linked list
                 ref = ref->next;
             }
@@ -50,6 +55,7 @@
         // Set ivars
         _refNames = refNames;
         _refNameURLDictionary = refURLForName;
+        _refNamesDefinedButNotUsed = refNamesDefinedButNotUsed;
     }
     return self;
 }
@@ -62,6 +68,11 @@
 - (NSDictionary*)refNameURLDictionary
 {
     return _refNameURLDictionary;
+}
+
+- (NSArray *)refNamesDefinedButNotUsed
+{
+    return _refNamesDefinedButNotUsed;
 }
 
 + (NSRange)rangeOfRefInDefinitionOfLinkRefName:(NSString *)refName usingText:(NSString *)text

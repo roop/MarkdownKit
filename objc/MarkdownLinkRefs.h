@@ -13,8 +13,9 @@
 
 - (instancetype)initWithText:(NSString *)text markdownData:(struct sd_markdown *)markdown_data;
 
-- (NSArray *)refNames;
+- (NSArray *)refNames; // Sorted
 - (NSDictionary*)refNameURLDictionary;
+- (NSArray *)refNamesDefinedButNotUsed; // Unordered
 
 + (NSRange)rangeOfRefInDefinitionOfLinkRefName:(NSString *)refName usingText:(NSString *)text
                                andMarkdownData:(struct sd_markdown *)markdown_data;

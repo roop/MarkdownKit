@@ -24,6 +24,7 @@ struct link_ref {
     unsigned int id;
 
     size_t ref_name_srcmap_pos, ref_name_srcmap_len;
+    int is_used;
 
     struct buf *link;
     struct buf *title;

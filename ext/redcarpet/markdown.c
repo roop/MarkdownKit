@@ -1314,6 +1314,8 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		}
 		if (!lr)
 			goto cleanup;
+		else
+			lr->is_used = 1;
 
 		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_b) - 1, 1, SHL_LINK_OR_IMG_REF_ENCLOSURE); // "["
 		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_b), link_e - link_b, SHL_LINK_OR_IMG_REF);
@@ -1354,6 +1356,8 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		lr = find_link_ref(rndr->refs, id.data, id.size);
 		if (!lr)
 			goto cleanup;
+		else
+			lr->is_used = 1;
 
 		/* keeping link and title from link_ref */
 		link = lr->link;
