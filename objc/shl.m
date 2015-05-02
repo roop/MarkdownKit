@@ -24,7 +24,9 @@ static void describeSyntaxHighlightData(const struct SyntaxHighlightData *shlDat
 		if (shlData->textFormatting & MarkdownTextContentUnderlined) { printf("Underlined "); }
 		if (shlData->textFormatting & MarkdownTextContentStrikethrough) { printf("Strikethrough "); }
 		if (shlData->textFormatting & MarkdownTextContentHighlighted) { printf("Highlighted "); }
-		if (shlData->textFormatting & MarkdownTextContentLinked) { printf("Linked "); }
+		if (shlData->textFormatting & MarkdownTextContentLinkedWithURL) { printf("LinkedWithURL "); }
+		if (shlData->textFormatting & MarkdownTextContentLinkedWithRef) { printf("LinkedWithRef "); }
+		if (shlData->textFormatting & MarkdownTextContentLinkedRef) { printf("LinkedRef "); }
 		if (shlData->textFormatting & MarkdownTextContentSuperscripted) { printf("Superscripted "); }
 		if (shlData->textFormatting & MarkdownTextContentHeader) { printf("Header "); }
 		if (shlData->textFormatting & MarkdownTextContentTableHeader) { printf("TableHeader "); }

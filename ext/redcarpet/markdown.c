@@ -1051,6 +1051,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 	int text_has_nl = 0, ret = 0;
 	int in_title = 0, qtype = 0;
 	int is_empty_or_missing_ref = 0;
+	int is_using_separate_ref = 0;
 
 	/* checking whether the correct renderer exists */
 	if ((is_img && !rndr->cb.image) || (!is_img && !rndr->cb.link))
@@ -1245,6 +1246,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 				id.size = txt_e - 1;
 			}
 		} else { // "[linked text][ref]"
+			is_using_separate_ref = 1;
 			id.data = data + link_b;
 			id.size = link_e - link_b;
 		}
@@ -1373,14 +1375,19 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		if (is_img) {
 			bufput(content, data + 1, txt_e - 1);
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_subtract(srcmap, 1), 2, SHL_IMG_ALT_ENCLOSURE); // "!["
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, 1), txt_e - 1, SHL_IMG_ALT_TEXT);
+			shl_syntax_formatting_t imgfmt = (is_empty_or_missing_ref ?
+											 SHL_IMG_ALT_TEXT_AS_REF :
+											 (is_using_separate_ref ? SHL_IMG_ALT_TEXT_WITH_REF : SHL_IMG_ALT_TEXT_WITH_URL));
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, 1), txt_e - 1, imgfmt);
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_IMG_ALT_ENCLOSURE); // "]"
 		} else {
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap, 1, SHL_LINKED_TEXT_ENCLOSURE); // "["
 			/* disable autolinking when parsing inline the
 			 * content of a link */
 			rndr->in_link_body = 1;
-			shl_text_formatting_t linkfmt = (is_empty_or_missing_ref ? SHL_LINKED_REF_CONTENT : SHL_LINKED_CONTENT);
+			shl_text_formatting_t linkfmt = (is_empty_or_missing_ref ?
+											 SHL_LINKED_CONTENT_AS_REF :
+											 (is_using_separate_ref ? SHL_LINKED_CONTENT_WITH_REF : SHL_LINKED_CONTENT_WITH_URL));
 			parse_inline(content, rndr, data + 1, txt_e - 1, srcmap_add(srcmap, 1), txtfmt | linkfmt);
 			rndr->in_link_body = 0;
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, txt_e), 1, SHL_LINKED_TEXT_ENCLOSURE); // "]"

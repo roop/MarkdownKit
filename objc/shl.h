@@ -29,9 +29,10 @@ enum {
     SHL_HIGHLIGHT_CONTENT = (1 << 4),
     SHL_SUPERSCRIPTED_CONTENT = (1 << 5),
 
-    SHL_LINKED_CONTENT = (1 << 6),
-    SHL_LINKED_REF_CONTENT = (1 << 7),
-    SHL_POTENTIALLY_LINKED_CONTENT_WITH_REF_UNDEFINED = (1 << 8),
+    SHL_LINKED_CONTENT_WITH_URL = (1 << 6),
+    SHL_LINKED_CONTENT_WITH_REF = (1 << 7),
+    SHL_LINKED_CONTENT_AS_REF = (1 << 8),
+    SHL_POTENTIALLY_LINKED_CONTENT_WITH_REF_UNDEFINED = (1 << 9),
 
     SHL_HEADER_CONTENT = (1 << 10),
     SHL_TABLE_HEADER_CELL_CONTENT = (1 << 11),
@@ -60,9 +61,10 @@ typedef NS_OPTIONS(uint16_t, MarkdownTextContent) {
     MarkdownTextContentHighlighted = (1 << 4),
     MarkdownTextContentSuperscripted = (1 << 5),
 
-    MarkdownTextContentLinked = (1 << 6),
-    MarkdownTextContentLinkedRef = (1 << 7),
-    MarkdownTextContentPotentiallyLinkedWithRefUndefined = (1 << 8),
+    MarkdownTextContentLinkedWithURL = (1 << 6),
+    MarkdownTextContentLinkedWithRef = (1 << 7),
+    MarkdownTextContentLinkedRef = (1 << 8),
+    MarkdownTextContentPotentiallyLinkedWithRefUndefined = (1 << 9),
 
     MarkdownTextContentHeader = (1 << 10),
     MarkdownTextContentTableHeader = (1 << 11),
@@ -99,8 +101,11 @@ enum {
     SHL_CODE_SPAN_CLOSE,
 
     SHL_LINKED_TEXT_ENCLOSURE,
-    SHL_IMG_ALT_TEXT,
     SHL_IMG_ALT_ENCLOSURE,
+
+    SHL_IMG_ALT_TEXT_WITH_URL,
+    SHL_IMG_ALT_TEXT_WITH_REF,
+    SHL_IMG_ALT_TEXT_AS_REF,
     SHL_POTENTIAL_IMG_ALT_TEXT_REF_UNDEFINED,
 
     SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE,
@@ -155,8 +160,11 @@ typedef NS_ENUM(uint16_t, MarkdownMarkup) {
     MarkdownMarkupCodeSpanClose,
 
     MarkdownMarkupLinkedTextEnclosure,
-    MarkdownMarkupImageAltText,
     MarkdownMarkupImageAltEnclosure,
+
+    MarkdownMarkupImageAltTextWithURL,
+    MarkdownMarkupImageAltTextWithRef,
+    MarkdownMarkupImageAltTextAsRef,
     MarkdownMarkupPotentialImageAltTextWithRefUndefined,
 
     MarkdownMarkupLinkOrImageInlineDataEnclosure,
