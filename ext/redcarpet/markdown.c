@@ -1178,12 +1178,25 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 			}
 		}
 
-		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, open_parens_pos), 1, SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE); // "("
-		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 1, SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE); // ")"
-
 		/* remove whitespace at the end of the link */
 		while (link_e > link_b && _isspace(data[link_e - 1]))
 			link_e--;
+
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, open_parens_pos), 1, SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE); // "("
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, i), 1, SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE); // ")"
+		shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, open_parens_pos + 1),
+												link_b - (open_parens_pos + 1),
+												((link_e > link_b) ? SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_BEFORE_URL :
+												 SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_BEFORE_EMPTY_URL));
+		if (title_e > title_b /* has title*/) {
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_e),
+													(title_b - 1) - link_e, SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_AFTER_URL_WITH_TITLE);
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_e + 1),
+													i - (title_e + 1), SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_AFTER_TITLE);
+		} else {
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_e),
+													i - link_e, SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_AFTER_URL_WITHOUT_TITLE);
+		}
 
 		/* remove optional angle brackets around the link */
 		if (data[link_b] == '<') {

@@ -109,6 +109,11 @@ enum {
     SHL_POTENTIAL_IMG_ALT_TEXT_REF_UNDEFINED,
 
     SHL_LINK_OR_IMG_INLINE_DATA_ENCLOSURE,
+    SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_BEFORE_URL,
+    SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_BEFORE_EMPTY_URL,
+    SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_AFTER_URL_WITH_TITLE,
+    SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_AFTER_URL_WITHOUT_TITLE,
+    SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_AFTER_TITLE,
     SHL_LINK_OR_IMG_INLINE_URL,
     SHL_LINK_OR_IMG_INLINE_URL_ENCLOSURE,
     SHL_LINK_OR_IMG_INLINE_TITLE,
@@ -168,6 +173,11 @@ typedef NS_ENUM(uint16_t, MarkdownMarkup) {
     MarkdownMarkupPotentialImageAltTextWithRefUndefined,
 
     MarkdownMarkupLinkOrImageInlineDataEnclosure,
+    MarkdownMarkupLinkOrImageInlineDataWhitespaceBeforeURL,
+    MarkdownMarkupLinkOrImageInlineDataWhitespaceBeforeEmptyURL,
+    MarkdownMarkupLinkOrImageInlineDataWhitespaceAfterURLWithTitle,
+    MarkdownMarkupLinkOrImageInlineDataWhitespaceAfterURLWithoutTitle,
+    MarkdownMarkupLinkOrImageInlineDataWhitespaceAfterTitle,
     MarkdownMarkupLinkOrImageInlineURL,
     MarkdownMarkupLinkOrImageInlineURLEnclosure,
     MarkdownMarkupLinkOrImageInlineTitle,
