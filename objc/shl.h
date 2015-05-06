@@ -20,8 +20,10 @@ enum {
     // Multiple mergeable formattings can apply
     // to the same text range.
 
+    // Regular text
     SHL_TEXT_CONTENT = 0,
 
+    // Emphasized text
     SHL_EM_CONTENT = (1 << 0),
     SHL_STRONG_CONTENT = (1 << 1),
     SHL_UNDERLINE_CONTENT = (1 << 2),
@@ -29,24 +31,29 @@ enum {
     SHL_HIGHLIGHT_CONTENT = (1 << 4),
     SHL_SUPERSCRIPTED_CONTENT = (1 << 5),
 
-    SHL_LINKED_CONTENT_WITH_URL = (1 << 6),
-    SHL_LINKED_CONTENT_WITH_REF = (1 << 7),
-    SHL_LINKED_CONTENT_AS_REF = (1 << 8),
-    SHL_POTENTIALLY_LINKED_CONTENT_WITH_REF_UNDEFINED = (1 << 9),
+    // Linked text meta bits
+    SHL_LINKED_CONTENT_IS_LINKED = (1 << 6), // '&' with this to know if it's any type of linked content
+    SHL_LINKED_CONTENT_TYPE_OF_LINK = (7 << 6), // '&' with this to know the specific type of linked content
 
+    // Linked text
+    SHL_LINKED_CONTENT_WITH_URL = (1 << 6),
+    SHL_LINKED_CONTENT_WITH_REF = (3 << 6),
+    SHL_LINKED_CONTENT_AS_REF = (5 << 6),
+    SHL_POTENTIALLY_LINKED_CONTENT_WITH_REF_UNDEFINED = (7 << 6),
+
+    // Unused: (1 << 9) = 0x0200
+
+    // Block-ish text
     SHL_HEADER_CONTENT = (1 << 10),
     SHL_TABLE_HEADER_CELL_CONTENT = (1 << 11),
     SHL_LIST_ITEM_CONTENT = (1 << 12),
     SHL_BLOCKQUOTE_CONTENT = (1 << 13),
 
-    // Can go upto (1 << 13) = 0x2000
-
     // Ummergeable text formatting.
-
     SHL_CODE_BLOCK_CONTENT = (1 << 14),
     SHL_CODE_SPAN_CONTENT = (2 << 14)
 
-    // Can go upto (3 << 14) = 0xC000
+    // Unused: (3 << 14) = 0xC000
 };
 
 #else
@@ -61,10 +68,13 @@ typedef NS_OPTIONS(uint16_t, MarkdownTextContent) {
     MarkdownTextContentHighlighted = (1 << 4),
     MarkdownTextContentSuperscripted = (1 << 5),
 
+    MarkdownTextContentIsLinked = (1 << 6),
+    MarkdownTextContentTypeOfLink = (7 << 6),
+
     MarkdownTextContentLinkedWithURL = (1 << 6),
-    MarkdownTextContentLinkedWithRef = (1 << 7),
-    MarkdownTextContentLinkedRef = (1 << 8),
-    MarkdownTextContentPotentiallyLinkedWithRefUndefined = (1 << 9),
+    MarkdownTextContentLinkedWithExplicitRef = (3 << 6),
+    MarkdownTextContentLinkedWithImplicitRef = (5 << 6),
+    MarkdownTextContentNotLinkedSinceRefIsUndefined = (7 << 6),
 
     MarkdownTextContentHeader = (1 << 10),
     MarkdownTextContentTableHeader = (1 << 11),
