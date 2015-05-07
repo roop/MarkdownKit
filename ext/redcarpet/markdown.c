@@ -1188,7 +1188,7 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 												link_b - (open_parens_pos + 1),
 												((link_e > link_b) ? SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_BEFORE_URL :
 												 SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_BEFORE_EMPTY_URL));
-		if (title_e > title_b /* has title*/) {
+		if (title_b > 0) { /* has "title", or at least just "" */
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, link_e),
 													(title_b - 1) - link_e, SHL_LINK_OR_IMG_INLINE_DATA_WHITESPACE_AFTER_URL_WITH_TITLE);
 			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_e + 1),
@@ -1218,9 +1218,15 @@ char_link(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset
 		if (title_e > title_b) {
 			title = rndr_newbuf(rndr, BUFFER_SPAN);
 			bufput(title, data + title_b, title_e - title_b);
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_b) - 1, 1, SHL_LINK_OR_IMG_INLINE_TITLE_QUOTES); // " or '
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_b), title_e - title_b, SHL_LINK_OR_IMG_INLINE_TITLE);
-			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_e), 1, SHL_LINK_OR_IMG_INLINE_TITLE_QUOTES); // " or '
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_b), title_e - title_b,
+													SHL_LINK_OR_IMG_INLINE_TITLE);
+		}
+
+		if (title_b > 0) {
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_b) - 1, 1,
+													SHL_LINK_OR_IMG_INLINE_TITLE_QUOTES); // " or '
+			shl_apply_syntax_formatting_with_srcmap(rndr->shl, srcmap_add(srcmap, title_e), 1,
+													SHL_LINK_OR_IMG_INLINE_TITLE_QUOTES); // " or '
 		}
 
 		i++;
