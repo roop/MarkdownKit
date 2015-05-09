@@ -140,6 +140,8 @@ enum {
 
     SHL_REF_DEFINITION_REF,
     SHL_REF_DEFINITION_REF_ENCLOSURE,
+    SHL_REF_DEFINITION_WHITESPACE_AFTER_URL_WITH_TITLE,
+    SHL_REF_DEFINITION_WHITESPACE_AFTER_URL_WITHOUT_TITLE,
     SHL_REF_DEFINITION_URL,
     SHL_REF_DEFINITION_URL_ENCLOSURE,
     SHL_REF_DEFINITION_TITLE,
@@ -204,6 +206,8 @@ typedef NS_ENUM(uint16_t, MarkdownMarkup) {
 
     MarkdownMarkupRefDefinitionRef,
     MarkdownMarkupRefDefinitionRefEnclosure,
+    MarkdownMarkupRefDefinitionWhitespaceAfterURLWithTitle,
+    MarkdownMarkupRefDefinitionWhitespaceAfterURLWithoutTitle,
     MarkdownMarkupRefDefinitionURL,
     MarkdownMarkupRefDefinitionURLEnclosure,
     MarkdownMarkupRefDefinitionTitle,

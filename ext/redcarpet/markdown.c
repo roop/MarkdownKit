@@ -2975,13 +2975,20 @@ is_ref(const uint8_t *data, size_t beg, size_t end, size_t *last, struct link_re
 	if (data[link_offset - 1] == '<')
 		shl_apply_syntax_formatting_with_range(shl, sp_link_begin - 1, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // "<"
 	shl_apply_syntax_formatting_with_range(shl, sp_link_begin, sp_link_end - sp_link_begin, SHL_REF_DEFINITION_URL);
-	if (link_end < end && data[link_end] == '>')
+	if (link_end < end && data[link_end] == '>') {
 		shl_apply_syntax_formatting_with_range(shl, sp_link_end, 1, SHL_REF_DEFINITION_URL_ENCLOSURE); // ">"
+		sp_link_end++;
+	}
 	if (title_end > title_offset) {
+		shl_apply_syntax_formatting_with_range(shl, sp_link_end, sp_title_begin - 1 - sp_link_end,
+											   SHL_REF_DEFINITION_WHITESPACE_AFTER_URL_WITH_TITLE);
 		shl_apply_syntax_formatting_with_range(shl, sp_title_begin - 1, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Opening " or ' or (
 		shl_apply_syntax_formatting_with_range(shl, sp_title_begin, sp_title_end - sp_title_begin, SHL_REF_DEFINITION_TITLE);
 		if (title_end < end && (data[title_end] == '\'' || data[title_end] == '"' || data[title_end] == ')'))
 			shl_apply_syntax_formatting_with_range(shl, sp_title_end, 1, SHL_REF_DEFINITION_TITLE_QUOTES); // Closing " or ' or )
+	} else {
+		shl_apply_syntax_formatting_with_range(shl, sp_link_end, sp_end - sp_link_end,
+											   SHL_REF_DEFINITION_WHITESPACE_AFTER_URL_WITHOUT_TITLE);
 	}
 
 	/* a valid ref has been found, filling-in return structures */
