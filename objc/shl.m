@@ -109,6 +109,12 @@ void shl_apply_syntax_formatting_with_range(void *shl, size_t pos, size_t length
     struct SyntaxHighlightData shlData;
     shlData.markupFormatting = kind;
     shlData.textFormatting = 0;
+#ifdef DEBUG_SYNTAX_HIGHLIGHT_DATA
+    if (length > 0) {
+        printf("Range (%d, %d): ", (int) pos, (int) length);
+        describeSyntaxHighlightData(&shlData);
+    }
+#endif
     SyntaxHighlightArbiter *shlArbiter = (__bridge SyntaxHighlightArbiter *) shl;
     [shlArbiter ensureTextRange:NSMakeRange(pos, length) isSyntaxHighlightedWithData:shlData];
 }
