@@ -44,7 +44,7 @@
                                                     }];
                 [refNames insertObject:refName atIndex:insertionIndex];
                 [refURLs addObject:linkURLStr];
-                [refURLForName setValue:linkURLStr forKey:refName];
+                [refURLForName setValue:linkURLStr forKey:[refName lowercaseString]];
                 if (!ref->is_used) {
                     [refNamesDefinedButNotUsed addObject:refName];
                 }
