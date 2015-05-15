@@ -17,6 +17,8 @@
 - (NSDictionary*)refNameURLDictionary;
 - (NSArray *)refNamesDefinedButNotUsed; // Unordered
 
+- (NSRange) refNamesArrayRangeForPrefix: (NSString *)prefix maxLength:(NSUInteger)maxLength;
+
 + (NSRange)rangeOfRefInDefinitionOfLinkRefName:(NSString *)refName usingText:(NSString *)text
                                andMarkdownData:(struct sd_markdown *)markdown_data;
 
