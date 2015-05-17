@@ -175,8 +175,7 @@ static void applyTextFormattingUnderlineStrikethrough(NSDictionary *attrs, NSStr
 
 - (UIColor *) foregroundColorForTextFormatting:(MarkdownTextContent) fmt
 {
-    if (((fmt & MarkdownTextContentIsLinked) == MarkdownTextContentIsLinked) &&
-        ((fmt & MarkdownTextContentTypeOfLink) != MarkdownTextContentNotLinkedSinceRefIsUndefined)) {
+    if ((fmt & MarkdownTextContentIsLinked) == MarkdownTextContentIsLinked) {
         return [UIColor blueColor];
     }
     return nil;

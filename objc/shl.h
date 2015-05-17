@@ -39,9 +39,9 @@ enum {
     SHL_LINKED_CONTENT_WITH_URL = (1 << 6),
     SHL_LINKED_CONTENT_WITH_REF = (3 << 6),
     SHL_LINKED_CONTENT_AS_REF = (5 << 6),
-    SHL_POTENTIALLY_LINKED_CONTENT_WITH_REF_UNDEFINED = (7 << 6),
 
-    // Unused: (1 << 9) = 0x0200
+    // Not linked text, but might be followed by a SHL_LINK_OR_IMG_REF_UNDEFINED
+    SHL_UNLINKED_WITH_POSSIBLE_UNDEFINED_REF = (1 << 9),
 
     // Block-ish text
     SHL_HEADER_CONTENT = (1 << 10),
@@ -74,7 +74,8 @@ typedef NS_OPTIONS(uint16_t, MarkdownTextContent) {
     MarkdownTextContentLinkedWithURL = (1 << 6),
     MarkdownTextContentLinkedWithExplicitRef = (3 << 6),
     MarkdownTextContentLinkedWithImplicitRef = (5 << 6),
-    MarkdownTextContentNotLinkedSinceRefIsUndefined = (7 << 6),
+
+    MarkdownTextContentUnlinkedWithPossibleUndefinedRef = (1 << 9),
 
     MarkdownTextContentHeader = (1 << 10),
     MarkdownTextContentTableHeader = (1 << 11),

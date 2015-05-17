@@ -55,6 +55,12 @@ struct footnote_list {
     struct footnote_item *tail;
 };
 
+/* undefined ref: last seen ref that was used but undefined */
+struct ref_range {
+    uint8_t* location;
+    size_t length;
+};
+
 /* render • structure containing one particular render */
 struct sd_markdown {
     struct sd_callbacks	cb;
@@ -70,6 +76,7 @@ struct sd_markdown {
     int in_link_body;
 
     void *shl; /* Used for sending syntax highlight data to Obj-C */
+    struct ref_range last_seen_undef_ref; /* Used to indentify refs used but undefined */
 };
 
 #endif // MARKDOWN_P_H__
