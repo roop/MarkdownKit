@@ -157,6 +157,8 @@ enum {
     SHL_RAW_HTML_TAG,
     SHL_RAW_HTML_BLOCK_TEXT_CONTENT,
     SHL_RAW_HTML_COMMENT,
+
+    SHL_YAML_FRONT_MATTER
 };
 
 #else
@@ -222,7 +224,9 @@ typedef NS_ENUM(uint16_t, MarkdownMarkup) {
 
     MarkdownMarkupRawHTMLTag,
     MarkdownMarkupRawHTMLBlockTextContent,
-    MarkdownMarkupRawHTMLComment
+    MarkdownMarkupRawHTMLComment,
+
+    MarkdownMarkupYAMLFrontMatter
 };
 
 typedef MarkdownMarkup shl_syntax_formatting_t;

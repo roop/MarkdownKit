@@ -2727,6 +2727,68 @@ static void write_sourcemap_for_utf8_sequence(const uint8_t *data, size_t size, 
 	(*source_pos_ptr) = source_pos;
 }
 
+/* Utils for Jekyll YAML front-matter (in Jekyll posts) */
+
+static inline int _is_space_or_tab(int c)
+{
+	return (c == ' ' || c == '\t');
+}
+
+static size_t is_yaml_separator_line(const uint8_t *data, size_t beg, size_t size, int is_start)
+{
+	/* either 3 dashes or, when not at start, 3 dots */
+	if (beg + 3 >= size) return 0;
+	uint8_t c = data[beg];
+	if (is_start) {
+		if (c != '-') return 0;
+	} else {
+		if (c != '-' && c != '.') return 0;
+	}
+	if (data[beg + 1] == c && data[beg + 2] == c) {
+		size_t i = beg + 3;
+		while (i < size && _is_space_or_tab(data[i]))
+			i++;
+		if (i < size && data[i] == '\n') {
+			return (i + 1);
+		}
+		if ((i + 1) < size && data[i] == '\r' && data[i + 1] == '\n') {
+			return (i + 2);
+		}
+	}
+	return 0;
+}
+
+static int is_yaml_front_matter(const uint8_t *data, size_t beg, size_t end, size_t *last,
+								void *shl, srcmap_t *source_pos_ptr)
+{
+	size_t open = is_yaml_separator_line(data, beg, end, /* is_start */ 1);
+	if (open == 0) {
+		return 0;
+	}
+
+	size_t i = open;
+	size_t close = 0;
+	while (i < end && close == 0) {
+		while (i < end && !(data[i - 1] == '\n' && (data[i] == '-' || data[i] == '.')))
+			i++;
+		close = is_yaml_separator_line(data, i, end, /* is_start */ 0);
+		if (close == 0)
+			i++;
+	}
+	if (close == 0) {
+		return 0;
+	}
+
+	srcmap_t sp_begin = (*source_pos_ptr);
+	srcmap_t sp_end = sp_begin + nsstring_length_of_utf8_sequence(data + beg, close - beg);
+	(*source_pos_ptr) = sp_end;
+
+	shl_apply_syntax_formatting_with_range(shl, sp_begin, sp_end - sp_begin, SHL_YAML_FRONT_MATTER);
+
+	(*last) = close;
+	return 1;
+}
+
 /*********************
  * REFERENCE PARSING *
  *********************/
@@ -3148,6 +3210,9 @@ sd_markdown_render(struct buf *ob, const uint8_t *document, size_t doc_size, str
 		beg += 3;
 
 	srcmap_t source_pos = 0;
+	if (is_yaml_front_matter(document, beg, doc_size, &end, md->shl, &source_pos)) {
+		beg = end;
+	}
 	while (beg < doc_size) /* iterating over lines */
 		if (footnotes_enabled && is_footnote(document, beg, doc_size, &end, &md->footnotes_found, md->shl, &source_pos))
 			beg = end;
